@@ -34,10 +34,10 @@ contract Battleship {
     }
     
     enum GameState { Created, Started, Finished, Paid }
-    GameState gameState;
+    GameState public gameState;
     
-    address player1;
-    address player2;
+    address public player1;
+    address public player2;
     address winner;
     
     mapping (address => PlayerInfo) private players;
@@ -50,6 +50,10 @@ contract Battleship {
         
         gameState = GameState.Created;
     }
+
+    function addOpponent(address opponent) public {
+
+    } 
     
     function joinGame() public {
         require(gameState == GameState.Created);

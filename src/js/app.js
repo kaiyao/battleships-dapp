@@ -3,23 +3,6 @@ App = {
   contracts: {},
 
   init: function() {
-    // Load pets.
-    $.getJSON('../pets.json', function(data) {
-      var petsRow = $('#petsRow');
-      var petTemplate = $('#petTemplate');
-
-      for (i = 0; i < data.length; i ++) {
-        petTemplate.find('.panel-title').text(data[i].name);
-        petTemplate.find('img').attr('src', data[i].picture);
-        petTemplate.find('.pet-breed').text(data[i].breed);
-        petTemplate.find('.pet-age').text(data[i].age);
-        petTemplate.find('.pet-location').text(data[i].location);
-        petTemplate.find('.btn-adopt').attr('data-id', data[i].id);
-
-        petsRow.append(petTemplate.html());
-      }
-    });
-
     return App.initWeb3();
   },
 
@@ -37,23 +20,81 @@ App = {
   },
 
   initContract: function() {
-    $.getJSON('Adoption.json', function(data) {
+    $.getJSON('Lobby.json', function(data) {
       // Get the necessary contract artifact file and instantiate it with truffle-contract
-      var AdoptionArtifact = data;
-      App.contracts.Adoption = TruffleContract(AdoptionArtifact);
+      var LobbyArtifact = data;
+      App.contracts.Lobby = TruffleContract(LobbyArtifact);
     
       // Set the provider for our contract
-      App.contracts.Adoption.setProvider(App.web3Provider);
-    
-      // Use our contract to retrieve and mark the adopted pets
-      return App.markAdopted();
+      App.contracts.Lobby.setProvider(App.web3Provider);
+
+      $.getJSON('Battleship.json', function(data) {
+        // Get the necessary contract artifact file and instantiate it with truffle-contract
+        var BattleshipArtifact = data;
+        App.contracts.Battleship = TruffleContract(BattleshipArtifact);
+      
+        // Set the provider for our contract
+        App.contracts.Battleship.setProvider(App.web3Provider);
+
+        // Use our contract to retrieve and mark the adopted pets
+        return App.getGames();
+      });    
+      
     });
 
-    return App.bindEvents();
+    $('#start-new-game').on('click', App.newGame);
+
   },
 
-  bindEvents: function() {
-    $(document).on('click', '.btn-adopt', App.handleAdopt);
+  getGames: function() {
+    App.contracts.Lobby.deployed().then(function(instance) {
+      lobbyInstance = instance;
+
+      return lobbyInstance.getGamesBelongingToPlayer.call();
+    }).then(function(gameAddresses) {
+      console.log("Games List", gameAddresses);
+      for (i = 0; i < gameAddresses.length; i++) {
+        var gameAddress = gameAddresses[i];
+        $('#games-list').append('<div>' + gameAddress + '</div>');
+
+        var battleshipInstance = App.contracts.Battleship.at(gameAddress);
+        battleshipInstance.player1.call().then(function(a) {
+          console.log("battleship1", a);
+        });
+        battleshipInstance.player2.call().then(function(a) {
+          console.log("battleship2", a);
+        });
+        battleshipInstance.gameState.call().then(function(a) {
+          console.log("battleshipg", a);
+        });
+      }
+    }).catch(function(err) {
+      console.log(err.message);
+    }); 
+  },
+
+  newGame: function() {
+    console.log("newgame called");
+    var lobbyInstance;
+
+    web3.eth.getAccounts(function(error, accounts) {
+      if (error) {
+        console.log(error);
+      }
+    
+      var account = accounts[0];
+    
+      App.contracts.Lobby.deployed().then(function(instance) {
+        lobbyInstance = instance;
+    
+        // Execute adopt as a transaction by sending account
+        return lobbyInstance.createGame({from: account});
+      }).then(function(result) {
+        return App.getGames();
+      }).catch(function(err) {
+        console.log(err.message);
+      });
+    });
   },
 
   markAdopted: function(adopters, account) {
