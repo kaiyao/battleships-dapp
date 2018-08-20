@@ -95,7 +95,7 @@ contract Battleship {
         }        
     }
 
-    function checkAllHiddenShipsSubmitted() private returns (bool) {
+    function checkAllHiddenShipsSubmitted() private view returns (bool) {
         uint player1Ships = 0;
         uint player2Ships = 0;
         for (uint i = 0; i < shipsPerPlayer; i++) {
@@ -115,6 +115,7 @@ contract Battleship {
     
     function makeMove(uint x, uint y) public {
         require(gameState == GameState.Started);
+        require(msg.sender == player1 || msg.sender == player2);
         
         // Check that it is the player's turn
         require(
@@ -134,6 +135,7 @@ contract Battleship {
     
     function updateLastOpponentMoveWithResult(MoveResult result, uint shipNumber) public {
         require(gameState == GameState.Started);
+        require(msg.sender == player1 || msg.sender == player2);
         require(result == MoveResult.Miss || (shipNumber >= 0 && shipNumber < shipsPerPlayer));
         
         // You cannot update with "unknown" result
@@ -159,23 +161,26 @@ contract Battleship {
     
     function setGameEnd() private {
         require(gameState == GameState.Started);
+        require(msg.sender == player1 || msg.sender == player2);
         gameState = GameState.Finished;
     }
     
-    function revealShip(uint width, uint height, uint x, uint y) public {
+    function revealShip(uint shipNumber, uint width, uint height, uint x, uint y) public {
         require(gameState == GameState.Finished);
+        require(msg.sender == player1 || msg.sender == player2);
+        require(shipNumber >=0 && shipNumber < shipsPerPlayer);
         require(width == 1 || height == 1);
         require(x + width <= boardWidth);
         require(y + height <= boardWidth);
         require(
-            (boardShips[players[msg.sender].revealShipsCount] == width && height == 1) || 
-            (boardShips[players[msg.sender].revealShipsCount] == height && width == 1)
+            (boardShips[shipNumber] == width && height == 1) || 
+            (boardShips[shipNumber] == height && width == 1)
         );
         
-        players[msg.sender].revealShips[players[msg.sender].revealShipsCount] = Ship(width, height, x, y);
+        players[msg.sender].revealShips[shipNumber] = Ship(width, height, x, y);
     }
     
-    function checkWinner() public {
+    function checkWinner() public view returns (address) {
         require(gameState == GameState.Finished);
         // Check that both players have submitted their ships and nonce
         require(players[player1].revealShipsCount == boardShips.length);

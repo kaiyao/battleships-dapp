@@ -5,7 +5,7 @@ import "truffle/DeployedAddresses.sol";
 import "../contracts/Adoption.sol";
 
 contract TestAdoption {
-    Adoption adoption = Adoption(DeployedAddresses.Adoption());
+    /*Adoption adoption = Adoption(DeployedAddresses.Adoption());
 
     // Testing the adopt() function
     function testUserCanAdoptPet() public {
@@ -35,5 +35,5 @@ contract TestAdoption {
         address[16] memory adopters = adoption.getAdopters();
 
         Assert.equal(adopters[8], expected, "Owner of pet ID 8 should be recorded.");
-    }
+    }*/
 }
