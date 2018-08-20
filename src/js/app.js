@@ -1,112 +1,112 @@
-window.setTimeout(function() {
-var app = new Vue({
-  el: '#app',
-  data: {
-    message: 'Hello Vue!',
-    web3Provider: null,
-    contracts: {},
-  },
+window.addEventListener('load', () => {
 
-  created: function () {
-    return this.initWeb3();
-  },
+  // https://github.com/mesirendon/DappExample/blob/master/src/main.js
+  if (typeof web3 !== 'undefined') {
+    console.log('Web3 injected browser: OK.')
+    window.web3 = new Web3(window.web3.currentProvider)
+  } else {
+    console.log('Web3 injected browser: Fail. You should consider trying MetaMask.')
+    window.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'))
+  }
 
-  methods: {
-
-    initWeb3: function () {
-      // Is there an injected web3 instance?
-      if (typeof web3 !== 'undefined') {
-        this.web3Provider = window.web3.currentProvider;
-      } else {
-        // If no injected web3 instance is detected, fall back to Ganache
-        this.web3Provider = new Web3.providers.HttpProvider('http://localhost:8545');
-      }
-      web3 = new Web3(this.web3Provider);
-
-      return this.initContract();
+  window.app = new Vue({
+    el: '#app',
+    data: {
+      message: 'Hello Vue!',
+      contracts: {},
     },
 
-    initContract: function () {
-      axios.get('Lobby.json').then(data => {
-        // Get the necessary contract artifact file and instantiate it with truffle-contract
-        var LobbyArtifact = data;
-        console.log(this.contracts);
-        this.contracts.Lobby = TruffleContract(LobbyArtifact);
+    created: function () {
+      return this.initWeb3();
+    },
 
-        // Set the provider for our contract
-        this.contracts.Lobby.setProvider(this.web3Provider);
+    methods: {
 
-        return axios.get('Battleship.json');
-      }).then(data => {
+      initWeb3: function () {
+        return this.initContract();
+      },
+
+      initContract: function () {
+        axios.get('Lobby.json').then(data => {
+          // Get the necessary contract artifact file and instantiate it with truffle-contract
+          var LobbyArtifact = data;
+          console.log(this.contracts);
+          this.contracts.Lobby = TruffleContract(LobbyArtifact);
+
+          // Set the provider for our contract
+          this.contracts.Lobby.setProvider(window.web3.currentProvider);
+
+          return axios.get('Battleship.json');
+        }).then(data => {
           // Get the necessary contract artifact file and instantiate it with truffle-contract
           var BattleshipArtifact = data;
           this.contracts.Battleship = TruffleContract(BattleshipArtifact);
 
           // Set the provider for our contract
-          this.contracts.Battleship.setProvider(this.web3Provider);
+          this.contracts.Battleship.setProvider(window.web3.currentProvider);
 
           // Use our contract to retrieve and mark the adopted pets
           return this.getGames();
-      });
-    },
+        });
+      },
 
-    getGames: function () {
-      this.contracts.Lobby.deployed().then(instance => {
-        lobbyInstance = instance;
-
-        return lobbyInstance.getGamesBelongingToPlayer.call();
-      }).then(gameAddresses => {
-        console.log("Games List", gameAddresses);
-        for (i = 0; i < gameAddresses.length; i++) {
-          var gameAddress = gameAddresses[i];
-          $('#games-list').append('<div>' + gameAddress + '</div>');
-
-          var battleshipInstance = this.contracts.Battleship.at(gameAddress);
-          battleshipInstance.player1.call().then(function (a) {
-            console.log("battleship1", a);
-          });
-          battleshipInstance.player2.call().then(function (a) {
-            console.log("battleship2", a);
-          });
-          battleshipInstance.gameState.call().then(function (a) {
-            console.log("battleshipg", a);
-          });
-        }
-      }).catch(function (err) {
-        console.log(err.message);
-      });
-    },
-
-    newGame: function () {
-      console.log("newgame called");
-      var lobbyInstance;
-
-      web3.eth.getAccounts(function (error, accounts) {
-        if (error) {
-          console.log(error);
-        }
-
-        var account = accounts[0];
-
-        this.contracts.Lobby.deployed().then(function (instance) {
+      getGames: function () {
+        this.contracts.Lobby.deployed().then(instance => {
           lobbyInstance = instance;
 
-          // Execute adopt as a transaction by sending account
-          return lobbyInstance.createGame({ from: account });
-        }).then(function (result) {
-          return this.getGames();
+          return lobbyInstance.getGamesBelongingToPlayer.call();
+        }).then(gameAddresses => {
+          console.log("Games List", gameAddresses);
+          for (i = 0; i < gameAddresses.length; i++) {
+            var gameAddress = gameAddresses[i];
+            $('#games-list').append('<div>' + gameAddress + '</div>');
+
+            var battleshipInstance = this.contracts.Battleship.at(gameAddress);
+            battleshipInstance.player1.call().then(function (a) {
+              console.log("battleship1", a);
+            });
+            battleshipInstance.player2.call().then(function (a) {
+              console.log("battleship2", a);
+            });
+            battleshipInstance.gameState.call().then(function (a) {
+              console.log("battleshipg", a);
+            });
+          }
         }).catch(function (err) {
           console.log(err.message);
         });
-      });
-    },
+      },
 
-  }
+      newGame: function () {
+        console.log("newgame called");
+        var lobbyInstance;
 
+        web3.eth.getAccounts(function (error, accounts) {
+          if (error) {
+            console.log(error);
+          }
+
+          var account = accounts[0];
+
+          this.contracts.Lobby.deployed().then(function (instance) {
+            lobbyInstance = instance;
+
+            // Execute adopt as a transaction by sending account
+            return lobbyInstance.createGame({ from: account });
+          }).then(function (result) {
+            return this.getGames();
+          }).catch(function (err) {
+            console.log(err.message);
+          });
+        });
+      },
+
+    }
+
+
+  });
 
 });
-
-}, 2000);
 
 /*
 
