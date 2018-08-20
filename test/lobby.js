@@ -1,7 +1,7 @@
 const Lobby = artifacts.require("Lobby");
 const Battleship = artifacts.require("Battleship");
 
-contract('Lobby test', async (accounts) => {
+contract('Lobby open games', async (accounts) => {
 
     const owner = accounts[0];
     const alice = accounts[1];
@@ -100,4 +100,37 @@ contract('Lobby test', async (accounts) => {
         assert.equal(account_two_ending_balance, account_two_starting_balance + amount, "Amount wasn't correctly sent to the receiver");
     });*/
 
-})
+});
+
+
+contract('Lobby non-open games', async (accounts) => {
+
+    const owner = accounts[0];
+    const alice = accounts[1];
+    const bob = accounts[2];
+    const emptyAddress = '0x0000000000000000000000000000000000000000';
+
+    it("should be able to create new non-open game", async () => {
+        let instance = await Lobby.deployed();
+        
+        let games = await instance.getGamesBelongingToPlayer({from: alice});
+        assert.equal(games.length, 0, "list of games should be empty at the start");
+        
+        await instance.createGameWithOpponent(bob, {from: alice});
+        
+        games = await instance.getGamesBelongingToPlayer({from: alice});
+        assert.equal(games.length, 1, "list of games should have one game after creating new game");
+
+        openGames = await instance.getOpenGames();
+        assert.equal(openGames.length, 0, "open games should have zero games after creating non-open game");
+
+        games2 = await instance.getGamesBelongingToPlayer({from: bob});
+        assert.equal(games[0], games2[0], "game in alice and bob should have same address");
+        
+        let game = await Battleship.at(games[0]);
+
+        assert(await game.player1() == alice, "first player should be alice");
+        assert(await game.player2() == bob, "second player should be bob");
+    });
+
+});
