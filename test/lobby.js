@@ -45,15 +45,13 @@ contract('Lobby test', async (accounts) => {
         assert.equal(openGames.length, 1, "list of open games should have one game to join");
 
         const openGameIndex = 0;
-        let gameAddress = await instance.joinOpenGame(openGameIndex, {from: bob});
-        console.log(gameAddress);
+        await instance.joinOpenGame(openGameIndex, {from: bob});
 
         playerGames = await instance.getGamesBelongingToPlayer({from: bob});
-        console.log(playerGames);
+        //console.log(playerGames);
         assert.equal(playerGames.length, 1, "list of games should have one game after joining game");
 
         gameAddress = playerGames[0];
-        //assert.equal(playerGames[0], gameAddress, "game in bob and retrieved game should have same address");
 
         openGames = await instance.getOpenGames({from: bob});
         assert.equal(openGames[openGameIndex], 0, "open game should be removed from open games list");
