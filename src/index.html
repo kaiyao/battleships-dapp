@@ -9,7 +9,7 @@
     <title>Battleship Lobby</title>
 
     <!-- Bootstrap -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -96,128 +96,12 @@
         </div>
     </div>
 
-    <div class="container">
-        <div class="row">
-            <div class="col-xs-12 col-sm-8 col-sm-push-2">
-                <h1 class="text-center">Battleship</h1>
-                <hr/>
-                <br/>
-            </div>
-        </div>
-
-        <div id="games-list" class="row">
-
-        </div>
-
-        <div class="row">
-
-            <div class="col-xs-12">
-
-                <h1>Your Games</h1>
-
-                <table class="table table-striped">
-                    <tr>
-                        <th>ID</th>
-                        <th>Game State</th>
-                        <th>Started At</th>
-                        <th></th>
-                    </tr>
-                    <tr>
-                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
-                        <td>Waiting for players</td>
-                        <td>-</td>
-                        <td>Enter Game</td>
-                    </tr>
-                    <tr>
-                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
-                        <td>Started</td>
-                        <td>2018-08-08 10:12:13</td>
-                        <td>Enter Game</td>
-                    </tr>
-                </table>
-
-            </div>
-
-            <div class="col-xs-12">
-
-                <h1>Join an Open Game</h1>
-
-                <table class="table table-striped">
-                    <tr>
-                        <th>ID</th>
-                        <th>Opponent</th>
-                        <th></th>
-                    </tr>
-                    <tr>
-                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
-                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
-                        <td>Join Game</td>
-                    </tr>
-                    <tr>
-                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
-                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
-                        <td>Join Game</td>
-                    </tr>
-                </table>
-
-            </div>
-
-        </div>
-
-        <div class="row">
-
-            <div class="col-xs-12">
-
-                <h1>Join an Open Game</h1>
-
-                <table class="table table-striped">
-                    <tr>
-                        <th>ID</th>
-                        <th>Opponent</th>
-                        <th></th>
-                    </tr>
-                    <tr>
-                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
-                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
-                        <td>Join Game</td>
-                    </tr>
-                    <tr>
-                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
-                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
-                        <td>Join Game</td>
-                    </tr>
-                </table>
-
-            </div>
-
-        </div>
-
-        <div class="row">
-
-            <div class="col-xs-12">
-
-                <h1>Start New Game</h1>
-
-                <form class="form-inline">
-                    <div class="form-group">
-                        <label for="exampleInputName2">Opponent Address (leave blank to start an open game)</label>
-                        <input type="text" class="form-control" id="exampleInputName2" placeholder="0x0123456789012345678901234567890123456789">
-                    </div>
-                    <button type="submit" class="btn btn-default">Start New Game</button>
-                </form>
-
-                <button id="start-new-game">Start new game</button>
-            </div>
-        </div>
-    </div>
-
-
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="js/bootstrap.min.js"></script>
-    <script src="js/web3.min.js"></script>
-    <script src="js/truffle-contract.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@0.20.7/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/truffle-contract@3.0.6/dist/truffle-contract.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js" integrity="sha256-3kjowa0CUPPK4W+yaGpNP1exjs8gbX2SSsToEMd06K8="
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios@0.18.0/dist/axios.js" integrity="sha256-lrZTgsdM1iVdRigETFOU8u8/BmLX1ysQ8bzrULbuVFU="
