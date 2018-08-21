@@ -1,13 +1,16 @@
 window.addEventListener('load', () => {
 
+  window.web3Provider = null;
   // https://github.com/mesirendon/DappExample/blob/master/src/main.js
   if (typeof web3 !== 'undefined') {
     console.log('Web3 injected browser: OK.')
-    window.web3 = new Web3(window.web3.currentProvider)
+    window.web3Provider = window.web3.currentProvider;
   } else {
-    console.log('Web3 injected browser: Fail. You should consider trying MetaMask.')
-    window.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'))
+    console.log('Web3 injected browser: Fail. You should consider trying MetaMask.');
+    window.web3Provider = new Web3.providers.HttpProvider('http://localhost:8545');
   }
+
+  window.web3 = new Web3(window.web3Provider);
 
   window.app = new Vue({
     el: '#app',
@@ -27,23 +30,27 @@ window.addEventListener('load', () => {
       },
 
       initContract: function () {
-        axios.get('Lobby.json').then(data => {
+        axios.get('Lobby.json').then(response => {
+          let data = response.data;
+          
           // Get the necessary contract artifact file and instantiate it with truffle-contract
           var LobbyArtifact = data;
           console.log(this.contracts);
           this.contracts.Lobby = TruffleContract(LobbyArtifact);
 
           // Set the provider for our contract
-          this.contracts.Lobby.setProvider(window.web3.currentProvider);
+          this.contracts.Lobby.setProvider(window.web3Provider);
 
           return axios.get('Battleship.json');
-        }).then(data => {
+        }).then(response => {
+          let data = response.data;
+
           // Get the necessary contract artifact file and instantiate it with truffle-contract
           var BattleshipArtifact = data;
           this.contracts.Battleship = TruffleContract(BattleshipArtifact);
 
           // Set the provider for our contract
-          this.contracts.Battleship.setProvider(window.web3.currentProvider);
+          this.contracts.Battleship.setProvider(window.web3Provider);
 
           // Use our contract to retrieve and mark the adopted pets
           return this.getGames();
