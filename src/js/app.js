@@ -215,7 +215,11 @@ window.addEventListener('load', () => {
       myShips: [],
       myBoard: [],
       opponentBoard: [],
-      addBoard: [],
+      addShips: {
+        board: [],
+        rotation: "horizontal",
+        currentShipIndex: 0
+      }
     },
     created: function () {
 
@@ -287,25 +291,98 @@ window.addEventListener('load', () => {
         });
       },
 
-      addShip: function (width, height, x, y) {
-        console.log("addShip", width, height, x, y);
-        console.log("why", y, y + height, this.boardHeight, Math.min(y + height, this.boardHeight));
+
+      addShipResetHighlightPlacement: function () {
+        for (let i = 0; i < this.boardHeight; i++) {
+          this.$set(this.addShips.board, i, new Array(this.boardWidth));
+        }
+      },
+
+      addShipHighlightPlacement: function (x, y) {
+        let shipLength = this.boardShips[this.addShips.currentShipIndex];
+        let shipRotation = this.addShips.rotation;
+        let width = 0; 
+        let height = 0;
+        if (shipRotation == "horizontal") {
+          width = shipLength;
+          height = 1;
+        } else {
+          width = 1;
+          height = shipLength;
+        }
+
+        //console.log("addShip", width, height, x, y);
+        //console.log("why", y, y + height, this.boardHeight, Math.min(y + height, this.boardHeight));
 
         for (let i = 0; i < this.boardHeight; i++) {
-          this.$set(this.addBoard, i, new Array(this.boardWidth));
+          this.$set(this.addShips.board, i, new Array(this.boardWidth));
         }
 
         for(let i = y; i < Math.min(y + height, this.boardHeight); i++) {
-          console.log("inside", i);
+          //console.log("inside", i);
           for(let j = x; j < Math.min(x + width, this.boardWidth); j++) {
-            console.log("inside2", i, j);
+            //console.log("inside2", i, j);
 
             if (y + height > this.boardHeight || x + width > this.boardWidth) {
-              this.addBoard[i][j] = "invalid";
+              this.addShips.board[i][j] = "invalid";
             } else {
-              this.addBoard[i][j] = "valid";
+              this.addShips.board[i][j] = "valid";
             }            
           }
+        }
+      },
+
+      addShipSavePlacement: function (x, y) {
+        let shipLength = this.boardShips[this.addShips.currentShipIndex];
+        let shipRotation = this.addShips.rotation;
+        let width = 0; 
+        let height = 0;
+        if (shipRotation == "horizontal") {
+          width = shipLength;
+          height = 1;
+        } else {
+          width = 1;
+          height = shipLength;
+        }
+
+        // Placement is invalid
+        if (y + height > this.boardHeight || x + width > this.boardWidth) {
+          return;
+        }
+
+        this.myShips.push({
+          width: width,
+          height: height,
+          x: x,
+          y: y
+        });
+
+        this.addShips.currentShipIndex++;
+        
+      }
+    },
+    
+    computed: {
+      myShipsBoard: function () {
+        let board = [];
+        for (let i = 0; i < this.boardHeight; i++) {
+          board[i] = new Array(this.boardWidth);
+        }
+
+        for (let shipIndex = 0; shipIndex < this.myShips.length; shipIndex++) {
+          
+          let myShip = this.myShips[shipIndex];
+          let x = myShip.x;
+          let y = myShip.y;
+          let width = myShip.width;
+          let height = myShip.height;
+
+          for(let i = y; i < y + height; i++) {
+            for(let j = x; j < x + width, this.boardWidth; j++) {
+              board[i][j] = shipIndex;
+            }
+          }
+
         }
       }
     }
