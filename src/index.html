@@ -20,8 +20,51 @@
 </head>
 
 <body>
-    <div id="app">
+    <div class="container" id="app">
         {{ message }}
+
+        <div class="row">
+
+            <div class="col-xs-12">
+
+                <h1>Your Games</h1>
+
+                <table class="table table-striped">
+                    <tr>
+                        <th>ID</th>
+                        <th>Game State</th>
+                        <th>Started At</th>
+                        <th></th>
+                    </tr>
+                    <tr v-for="(game, id) in games">
+                        <td>{{ id }}</td>
+                        <td>{{ game.state }}</td>
+                        <td>{{ game.startedAt }}</td>
+                        <td>Enter Game</td>
+                    </tr>
+                    <tr>
+                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
+                        <td>Started</td>
+                        <td>2018-08-08 10:12:13</td>
+                        <td>Enter Game</td>
+                    </tr>
+                </table>
+
+            </div>
+
+        </div>
+        <div class="row">
+            <div class="col-xs-12">
+                <h1>Start New Game</h1>
+                <form class="form-inline">
+                    <div class="form-group">
+                        <label for="exampleInputName2">Opponent Address (leave blank to start an open game)</label>
+                        <input type="text" class="form-control" v-model="newGameOpponent" placeholder="0x0123456789012345678901234567890123456789">
+                    </div>
+                    <button type="button" class="btn btn-default" v-on:click="newGame">Start New Game</button>
+                </form>
+            </div>
+        </div>
     </div>
 
     <div class="container">

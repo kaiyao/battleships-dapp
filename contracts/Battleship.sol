@@ -51,6 +51,9 @@ contract Battleship {
     */
     enum GameState { Created, PlayersJoined, Started, Finished, Paid }
     GameState public gameState;
+
+    uint createdAt;
+    uint startedAt;
     
     address public player1;
     address public player2;

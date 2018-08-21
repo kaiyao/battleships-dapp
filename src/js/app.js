@@ -17,6 +17,8 @@ window.addEventListener('load', () => {
     data: {
       message: 'Hello Vue!',
       contracts: {},
+      games: {},
+      newGameOpponent: "",
     },
 
     created: function () {
@@ -64,19 +66,23 @@ window.addEventListener('load', () => {
           return lobbyInstance.getGamesBelongingToPlayer.call();
         }).then(gameAddresses => {
           console.log("Games List", gameAddresses);
-          for (i = 0; i < gameAddresses.length; i++) {
+          for (let i = 0; i < gameAddresses.length; i++) {
             var gameAddress = gameAddresses[i];
-            $('#games-list').append('<div>' + gameAddress + '</div>');
+            this.$set(this.games, gameAddress, {});
 
             var battleshipInstance = this.contracts.Battleship.at(gameAddress);
-            battleshipInstance.player1.call().then(function (a) {
-              console.log("battleship1", a);
+            battleshipInstance.player1.call().then(val => {
+              console.log("battleship1", val);
+              //this.games[gameAddress].player1 = val;
+              this.$set(this.games[gameAddress], 'player1', val);
             });
-            battleshipInstance.player2.call().then(function (a) {
-              console.log("battleship2", a);
+            battleshipInstance.player2.call().then(val => {
+              console.log("battleship2", val);
+              this.$set(this.games[gameAddress], 'player2', val);
             });
-            battleshipInstance.gameState.call().then(function (a) {
-              console.log("battleshipg", a);
+            battleshipInstance.gameState.call().then(val => {
+              console.log("battleshipg", val);
+              this.$set(this.games[gameAddress], 'state', val);
             });
           }
         }).catch(function (err) {
@@ -86,23 +92,21 @@ window.addEventListener('load', () => {
 
       newGame: function () {
         console.log("newgame called");
-        var lobbyInstance;
 
-        web3.eth.getAccounts(function (error, accounts) {
+        web3.eth.getAccounts((error, accounts) => {
           if (error) {
             console.log(error);
           }
 
           var account = accounts[0];
 
-          this.contracts.Lobby.deployed().then(function (instance) {
-            lobbyInstance = instance;
+          this.contracts.Lobby.deployed().then(lobbyInstance => {
 
             // Execute adopt as a transaction by sending account
-            return lobbyInstance.createGame({ from: account });
-          }).then(function (result) {
+            return lobbyInstance.createOpenGame({ from: account });
+          }).then(result => {
             return this.getGames();
-          }).catch(function (err) {
+          }).catch(err => {
             console.log(err.message);
           });
         });
