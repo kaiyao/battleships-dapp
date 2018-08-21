@@ -3,10 +3,10 @@ pragma solidity ^0.4.23;
 contract Battleship {
     
     // Configure the game settings here
-    uint constant boardWidth = 10;
-    uint constant boardHeight = 10;
-    uint[5] boardShips = [5, 4, 3, 3, 2];
+    uint public constant boardWidth = 10;
+    uint public constant boardHeight = 10;
     uint constant shipsPerPlayer = 5;
+    uint[shipsPerPlayer] public boardShips = [5, 4, 3, 3, 2];    
     uint constant shipSpaces = 5 + 4 + 3 + 3 + 2;
     
     struct Ship {
@@ -67,6 +67,10 @@ contract Battleship {
     constructor() public {
         owner = msg.sender;     
         gameState = GameState.Created;
+    }
+
+    function getBoardShips() public view returns (uint[shipsPerPlayer]) {
+        return boardShips;
     }
 
     function joinPlayer(address newPlayer) public {

@@ -17,6 +17,14 @@
       <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
+
+    <style>
+        .game-board td {
+            border: 1px solid #000;
+            width: 30px;
+            height: 30px;
+        }
+    </style>
 </head>
 
 <body>
@@ -63,20 +71,21 @@
 
                 <table class="table table-striped">
                     <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Opponent</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(game, id) in openGames">
-                        <td>{{ id }}</td>
-                        <td>{{ game.player1 }}</td>
-                        <td v-if="game.player1 == account">Your Game</td><td v-else><a href="#" v-on:click="joinOpenGame(game.gameId)">Join Game</a></td>
-                    </tr>
-                    </tr>
-                </tbody>
+                        <tr>
+                            <th>ID</th>
+                            <th>Opponent</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(game, id) in openGames">
+                            <td>{{ id }}</td>
+                            <td>{{ game.player1 }}</td>
+                            <td v-if="game.player1 == account">Your Game</td>
+                            <td v-else><a href="#" v-on:click="joinOpenGame(game.gameId)">Join Game</a></td>
+                        </tr>
+                        </tr>
+                    </tbody>
                 </table>
 
             </div>
@@ -94,6 +103,33 @@
                 </form>
             </div>
         </div>
+    </div>
+
+    <div class="container" id="game">
+
+        <div class="row">
+            <div class="col-xs-6">
+                <h1>Your ships</h1>
+                <table class="game-board">
+                    <tbody>
+                        <tr v-for="row in myBoard">
+                            <td v-for="col in row"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-xs-6">
+                <h1>Opponent's ships</h1>
+                <table class="game-board">
+                    <tbody>
+                        <tr v-for="row in myBoard">
+                            <td v-for="col in row"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->

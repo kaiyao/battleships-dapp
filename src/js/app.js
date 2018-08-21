@@ -58,8 +58,8 @@ window.addEventListener('load', () => {
           // Subscribe to events
           this.contracts.Lobby.deployed().then(instance => {
             let lobbyInstance = instance;
-  
-            let events = lobbyInstance.allEvents({address: null}, (error, log) => {
+
+            let events = lobbyInstance.allEvents({ address: null }, (error, log) => {
               console.log("lobby event triggered");
               this.getGames();
             });
@@ -187,7 +187,7 @@ window.addEventListener('load', () => {
 
       },
 
-      joinOpenGame: function(gameId) {
+      joinOpenGame: function (gameId) {
         this.contracts.Lobby.deployed().then(lobbyInstance => {
           // Execute adopt as a transaction by sending account
           return lobbyInstance.joinOpenGame(gameId, { from: this.account });
@@ -208,12 +208,70 @@ window.addEventListener('load', () => {
     data: {
       contracts: {},
       account: "",
+      gameAddress: "0x05db312105af62d96eb222bd7817f0778a81edbc",
+      boardWidth: 10,
+      boardHeight: 10,
       myShips: [],
       myBoard: [],
       opponentBoard: [],
     },
-    created: () => {
+    created: function () {
+      for (let i = 0; i < this.boardHeight; i++) {
+        this.myBoard[i] = new Array(this.boardWidth);
+      }
 
+      for (let i = 0; i < this.boardHeight; i++) {
+        this.opponentBoard[i] = new Array(this.boardWidth);
+      }
+
+      return this.initWeb3();
+    },
+    methods: {
+
+      initWeb3: function () {
+        web3.eth.getAccounts((error, accounts) => {
+          if (error) {
+            console.log(error);
+          }
+
+          var account = accounts[0];
+          this.account = account;
+
+          return this.initContract();
+        });
+      },
+
+      initContract: function () {
+        axios.get('Battleship.json').then(response => {
+          let data = response.data;
+
+          // Get the necessary contract artifact file and instantiate it with truffle-contract
+          var BattleshipArtifact = data;
+          this.contracts.Battleship = TruffleContract(BattleshipArtifact);
+
+          // Set the provider for our contract
+          this.contracts.Battleship.setProvider(window.web3Provider);
+
+          // Use our contract to retrieve and mark the adopted pets
+          return this.initBoard();
+        });
+      },
+
+      initBoard: function () {
+        var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+        battleshipInstance.player1.call().then(val => {
+          console.log("game-player1", this.gameAddress, val, val.toString());
+        });
+        battleshipInstance.boardWidth.call().then(val => {
+          console.log("game-boardWidth", this.gameAddress, val, val.toString());
+        });
+        battleshipInstance.boardHeight.call().then(val => {
+          console.log("game-boardHeight", this.gameAddress, val, val.toString());
+        });
+        battleshipInstance.getBoardShips.call().then(val => {
+          console.log("game-boardShips", this.gameAddress, val, val.toString());
+        });
+      },
     }
   });
 
