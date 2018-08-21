@@ -1,3 +1,5 @@
+'use strict';
+
 window.addEventListener('load', () => {
 
   window.web3Provider = null;
@@ -55,7 +57,7 @@ window.addEventListener('load', () => {
 
           // Subscribe to events
           this.contracts.Lobby.deployed().then(instance => {
-            lobbyInstance = instance;
+            let lobbyInstance = instance;
   
             let events = lobbyInstance.allEvents({address: null}, (error, log) => {
               console.log("lobby event triggered");
@@ -86,7 +88,7 @@ window.addEventListener('load', () => {
 
       getPlayerGames: function () {
         this.contracts.Lobby.deployed().then(instance => {
-          lobbyInstance = instance;
+          let lobbyInstance = instance;
 
           return lobbyInstance.getGamesBelongingToPlayer.call();
         }).then(gameAddresses => {
@@ -122,7 +124,7 @@ window.addEventListener('load', () => {
 
       getOpenGames: function () {
         this.contracts.Lobby.deployed().then(instance => {
-          lobbyInstance = instance;
+          let lobbyInstance = instance;
 
           return lobbyInstance.getOpenGames.call();
         }).then(gameAddresses => {
@@ -199,6 +201,20 @@ window.addEventListener('load', () => {
     }
 
 
+  });
+
+  window.game = new Vue({
+    el: '#game',
+    data: {
+      contracts: {},
+      account: "",
+      myShips: [],
+      myBoard: [],
+      opponentBoard: [],
+    },
+    created: () => {
+
+    }
   });
 
 });
