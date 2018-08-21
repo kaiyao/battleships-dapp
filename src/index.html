@@ -21,7 +21,14 @@
 
 <body>
     <div class="container" id="app">
-        {{ message }}
+
+        <div class="row">
+            <div class="col-xs-12">
+                <h1 class="text-center">Battleship</h1>
+                <hr/>
+                <br/>
+            </div>
+        </div>
 
         <div class="row">
 
@@ -30,24 +37,22 @@
                 <h1>Your Games</h1>
 
                 <table class="table table-striped">
-                    <tr>
-                        <th>ID</th>
-                        <th>Game State</th>
-                        <th>Started At</th>
-                        <th></th>
-                    </tr>
-                    <tr v-for="(game, id) in games">
-                        <td>{{ id }}</td>
-                        <td>{{ game.state }}</td>
-                        <td>{{ game.startedAt }}</td>
-                        <td>Enter Game</td>
-                    </tr>
-                    <tr>
-                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
-                        <td>Started</td>
-                        <td>2018-08-08 10:12:13</td>
-                        <td>Enter Game</td>
-                    </tr>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Game State</th>
+                            <th>Started At</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(game, id) in playerGames">
+                            <td>{{ id }}</td>
+                            <td>{{ game.state }}</td>
+                            <td>{{ game.startedAt }}</td>
+                            <td>Enter Game</td>
+                        </tr>
+                    </tbody>
                 </table>
 
             </div>
@@ -165,8 +170,10 @@
     <script src="js/bootstrap.min.js"></script>
     <script src="js/web3.min.js"></script>
     <script src="js/truffle-contract.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js" integrity="sha256-3kjowa0CUPPK4W+yaGpNP1exjs8gbX2SSsToEMd06K8=" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios@0.18.0/dist/axios.js" integrity="sha256-lrZTgsdM1iVdRigETFOU8u8/BmLX1ysQ8bzrULbuVFU=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js" integrity="sha256-3kjowa0CUPPK4W+yaGpNP1exjs8gbX2SSsToEMd06K8="
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@0.18.0/dist/axios.js" integrity="sha256-lrZTgsdM1iVdRigETFOU8u8/BmLX1ysQ8bzrULbuVFU="
+        crossorigin="anonymous"></script>
     <script src="js/app.js"></script>
 </body>
 

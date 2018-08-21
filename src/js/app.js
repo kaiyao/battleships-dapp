@@ -15,9 +15,10 @@ window.addEventListener('load', () => {
   window.app = new Vue({
     el: '#app',
     data: {
-      message: 'Hello Vue!',
       contracts: {},
-      games: {},
+      player: "",
+      playerGames: {},
+      openGames: {},
       newGameOpponent: "",
     },
 
@@ -34,7 +35,7 @@ window.addEventListener('load', () => {
       initContract: function () {
         axios.get('Lobby.json').then(response => {
           let data = response.data;
-          
+
           // Get the necessary contract artifact file and instantiate it with truffle-contract
           var LobbyArtifact = data;
           console.log(this.contracts);
@@ -60,6 +61,47 @@ window.addEventListener('load', () => {
       },
 
       getGames: function () {
+        this.getPlayerGames();
+        this.getOpenGames();
+      },
+
+      getPlayerGames: function () {
+        this.contracts.Lobby.deployed().then(instance => {
+          lobbyInstance = instance;
+
+          return lobbyInstance.getGamesBelongingToPlayer.call();
+        }).then(gameAddresses => {
+          console.log("Games List", gameAddresses);
+          for (let i = 0; i < gameAddresses.length; i++) {
+
+            let closure = () => {
+              var gameAddress = gameAddresses[i];
+              this.$set(this.playerGames, gameAddress, {});
+
+              var battleshipInstance = this.contracts.Battleship.at(gameAddress);
+              battleshipInstance.player1.call().then(val => {
+                console.log("battleship1", gameAddress, val);
+                //this.games[gameAddress].player1 = val;
+                this.$set(this.playerGames[gameAddress], 'player1', val);
+              });
+              battleshipInstance.player2.call().then(val => {
+                console.log("battleship2", gameAddress, val);
+                this.$set(this.playerGames[gameAddress], 'player2', val);
+              });
+              battleshipInstance.gameState.call().then(val => {
+                console.log("battleshipg", gameAddress, val);
+                this.$set(this.playerGames[gameAddress], 'state', val);
+              });
+            };
+            closure();
+            
+          }
+        }).catch(function (err) {
+          console.log(err.message);
+        });
+      },
+
+      /*getOpenGames: function () {
         this.contracts.Lobby.deployed().then(instance => {
           lobbyInstance = instance;
 
@@ -88,7 +130,7 @@ window.addEventListener('load', () => {
         }).catch(function (err) {
           console.log(err.message);
         });
-      },
+      },*/
 
       newGame: function () {
         console.log("newgame called");
