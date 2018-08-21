@@ -378,12 +378,14 @@ window.addEventListener('load', () => {
           let height = myShip.height;
 
           for(let i = y; i < y + height; i++) {
-            for(let j = x; j < x + width, this.boardWidth; j++) {
+            for(let j = x; j < x + width; j++) {
               board[i][j] = shipIndex;
             }
           }
 
         }
+
+        return board;
       }
     }
   });
