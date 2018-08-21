@@ -53,6 +53,16 @@ window.addEventListener('load', () => {
           // Set the provider for our contract
           this.contracts.Lobby.setProvider(window.web3Provider);
 
+          // Subscribe to events
+          this.contracts.Lobby.deployed().then(instance => {
+            lobbyInstance = instance;
+  
+            let events = lobbyInstance.allEvents({address: null}, (error, log) => {
+              console.log("lobby event triggered");
+              this.getGames();
+            });
+          });
+
           return axios.get('Battleship.json');
         }).then(response => {
           let data = response.data;

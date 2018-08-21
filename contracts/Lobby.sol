@@ -8,6 +8,22 @@ contract Lobby {
     mapping (address => address[]) public games;
     address[] public openGames;
 
+    event OpenGameCreated (
+        address indexed _from,
+        address indexed _gameAddress
+    );
+
+    event OpenGameJoined (
+        address indexed _from,
+        address indexed _gameAddress
+    );
+
+    event GameWithOpponentCreated (
+        address indexed _from,
+        address indexed _opponent,
+        address indexed _gameAddress
+    );
+
     constructor() public {
         owner = msg.sender;
     }
@@ -25,6 +41,7 @@ contract Lobby {
         Battleship(newContract).joinPlayer(msg.sender);
         games[msg.sender].push(newContract);
         openGames.push(newContract);
+        emit OpenGameCreated(msg.sender, newContract);
         return newContract;
     }
 
@@ -34,6 +51,7 @@ contract Lobby {
         Battleship(newContract).joinPlayer(opponent);
         games[msg.sender].push(newContract);
         games[opponent].push(newContract);
+        emit GameWithOpponentCreated(msg.sender, opponent, newContract);
         return newContract;
     }
 
@@ -43,6 +61,7 @@ contract Lobby {
         Battleship(gameAddress).joinPlayer(msg.sender);
         games[msg.sender].push(gameAddress);
         delete openGames[gameIndex];
+        emit OpenGameJoined(msg.sender, gameAddress);
 
         return gameAddress;
     }
