@@ -24,6 +24,12 @@
             width: 30px;
             height: 30px;
         }
+        .game-board .valid {
+            background-color: green;
+        }
+        .game-board .invalid {
+            background-color: red;
+        }
     </style>
 </head>
 
@@ -112,8 +118,8 @@
                 <h1>Your ships</h1>
                 <table class="game-board">
                     <tbody>
-                        <tr v-for="row in myBoard">
-                            <td v-for="col in row"></td>
+                        <tr v-for="(row, rowIndex) in myBoard">
+                            <td v-for="(col, colIndex) in row"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -122,8 +128,20 @@
                 <h1>Opponent's ships</h1>
                 <table class="game-board">
                     <tbody>
-                        <tr v-for="row in myBoard">
+                        <tr v-for="row in opponentBoard">
                             <td v-for="col in row"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-xs-6">
+                <h1>Add ships</h1>
+                <table class="game-board">
+                    <tbody>
+                        <tr v-for="(row, rowIndex) in myBoard">
+                            <td v-for="(col, colIndex) in row" v-bind:class="{ valid: addBoard[rowIndex] && addBoard[rowIndex][colIndex] == 'valid' ? true : false, invalid: addBoard[rowIndex] && addBoard[rowIndex][colIndex] == 'invalid' ? true : false }" v-on:mouseover="addShip(5, 1, colIndex, rowIndex)">
+                                <!-- {{rowIndex}},{{colIndex}},{{ addBoard[rowIndex] ? addBoard[rowIndex][colIndex] : "a" }} -->
+                            </td>
                         </tr>
                     </tbody>
                 </table>

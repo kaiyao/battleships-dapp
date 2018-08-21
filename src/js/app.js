@@ -208,21 +208,16 @@ window.addEventListener('load', () => {
     data: {
       contracts: {},
       account: "",
-      gameAddress: "0x05db312105af62d96eb222bd7817f0778a81edbc",
-      boardWidth: 10,
-      boardHeight: 10,
+      gameAddress: "0xa52fed3d29211300a0830003c8b5e437f18c17ec",
+      boardWidth: 0,
+      boardHeight: 0,
+      boardShips: [],
       myShips: [],
       myBoard: [],
       opponentBoard: [],
+      addBoard: [],
     },
     created: function () {
-      for (let i = 0; i < this.boardHeight; i++) {
-        this.myBoard[i] = new Array(this.boardWidth);
-      }
-
-      for (let i = 0; i < this.boardHeight; i++) {
-        this.opponentBoard[i] = new Array(this.boardWidth);
-      }
 
       return this.initWeb3();
     },
@@ -259,19 +254,60 @@ window.addEventListener('load', () => {
 
       initBoard: function () {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+        
         battleshipInstance.player1.call().then(val => {
           console.log("game-player1", this.gameAddress, val, val.toString());
-        });
-        battleshipInstance.boardWidth.call().then(val => {
+
+          return  battleshipInstance.boardWidth.call();
+        }).then(val => {
           console.log("game-boardWidth", this.gameAddress, val, val.toString());
-        });
-        battleshipInstance.boardHeight.call().then(val => {
+          this.boardWidth = val.toNumber();
+
+          return battleshipInstance.boardHeight.call();
+        }).then(val => {
           console.log("game-boardHeight", this.gameAddress, val, val.toString());
-        });
-        battleshipInstance.getBoardShips.call().then(val => {
+          this.boardHeight = val.toNumber();
+
+          return battleshipInstance.getBoardShips.call();
+        }).then(val => {
           console.log("game-boardShips", this.gameAddress, val, val.toString());
+          this.boardShips = val.map(x => x.toNumber());
+
+          for (let i = 0; i < this.boardHeight; i++) {
+            //this.myBoard[i] = new Array(this.boardWidth);
+            this.$set(this.myBoard, i, new Array(this.boardWidth));
+          }
+    
+          for (let i = 0; i < this.boardHeight; i++) {
+            //this.opponentBoard[i] = new Array(this.boardWidth);
+            this.$set(this.opponentBoard, i, new Array(this.boardWidth));
+          }
+
+
         });
       },
+
+      addShip: function (width, height, x, y) {
+        console.log("addShip", width, height, x, y);
+        console.log("why", y, y + height, this.boardHeight, Math.min(y + height, this.boardHeight));
+
+        for (let i = 0; i < this.boardHeight; i++) {
+          this.$set(this.addBoard, i, new Array(this.boardWidth));
+        }
+
+        for(let i = y; i < Math.min(y + height, this.boardHeight); i++) {
+          console.log("inside", i);
+          for(let j = x; j < Math.min(x + width, this.boardWidth); j++) {
+            console.log("inside2", i, j);
+
+            if (y + height > this.boardHeight || x + width > this.boardWidth) {
+              this.addBoard[i][j] = "invalid";
+            } else {
+              this.addBoard[i][j] = "valid";
+            }            
+          }
+        }
+      }
     }
   });
 
