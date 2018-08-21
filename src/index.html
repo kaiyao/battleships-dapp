@@ -23,12 +23,16 @@
             border: 1px solid #000;
             width: 30px;
             height: 30px;
+            text-align: center;
         }
         .game-board .valid {
-            background-color: green;
+            background-color: lightgreen;
         }
         .game-board .invalid {
-            background-color: red;
+            background-color: lightcoral;
+        }
+        .game-board .has-ship {
+            background-color: lightslategrey;
         }
     </style>
 </head>
@@ -136,13 +140,15 @@
             </div>
             <div class="col-xs-6">
                 <h1>Add ships</h1>
-                <div>Adding Ship Number {{ addShips.currentShipIndex + 1 }} of length {{ boardShips[addShips.currentShipIndex] }}</div>
+                <div v-if="addShips.currentShipIndex < this.boardShips.length">Adding Ship Number {{ addShips.currentShipIndex + 1 }} of length {{ boardShips[addShips.currentShipIndex] }}</div>
                 <input type="button" class="btn btn-default" value="Rotate Ship" title="Click here to rotate the ship before placing it" v-on:click="addShips.rotation = (addShips.rotation == 'horizontal' ? 'vertical' : 'horizontal')">
+                <input type="button" class="btn btn-default" value="Reset Ships" v-on:click="resetMyShips">
                 <table class="game-board">
                     <tbody>
                         <tr v-for="(row, rowIndex) in myBoard">
-                            <td v-for="(col, colIndex) in row" v-bind:class="{ valid: addShips.board[rowIndex] && addShips.board[rowIndex][colIndex] == 'valid' ? true : false, invalid: addShips.board[rowIndex] && addShips.board[rowIndex][colIndex] == 'invalid' ? true : false }" v-on:mouseover="addShipHighlightPlacement(colIndex, rowIndex)" v-on:mouseout="addShipResetHighlightPlacement" v-on:click="addShipSavePlacement(colIndex, rowIndex)">
+                            <td v-for="(col, colIndex) in row" v-bind:class="{ 'has-ship': myShipsBoard[rowIndex][colIndex] !== undefined, valid: addShips.board[rowIndex] && addShips.board[rowIndex][colIndex] == 'valid' ? true : false, invalid: addShips.board[rowIndex] && addShips.board[rowIndex][colIndex] == 'invalid' ? true : false }" v-on:mouseover="addShipHighlightPlacement(colIndex, rowIndex)" v-on:mouseout="addShipResetHighlightPlacement" v-on:click="addShipSavePlacement(colIndex, rowIndex)">
                                 <!-- {{rowIndex}},{{colIndex}},{{ addBoard[rowIndex] ? addBoard[rowIndex][colIndex] : "a" }} -->
+                                <span v-if="myShipsBoard[rowIndex][colIndex] !== undefined">{{ myShipsBoard[rowIndex][colIndex] + 1 }}</span>
                             </td>
                         </tr>
                     </tbody>

@@ -325,7 +325,9 @@ window.addEventListener('load', () => {
 
             if (y + height > this.boardHeight || x + width > this.boardWidth) {
               this.addShips.board[i][j] = "invalid";
-            } else {
+            } else if (this.myShipsBoard[i][j] !== undefined) {
+              this.addShips.board[i][j] = "invalid";
+            } else{
               this.addShips.board[i][j] = "valid";
             }            
           }
@@ -345,9 +347,19 @@ window.addEventListener('load', () => {
           height = shipLength;
         }
 
-        // Placement is invalid
+        // Check placement is within the board
         if (y + height > this.boardHeight || x + width > this.boardWidth) {
           return;
+        }
+
+        // Check placement does not overlap previous ships
+        for(let i = y; i < y + height; i++) {
+          for(let j = x; j < x + width; j++) {
+
+            if (this.myShipsBoard[i][j] !== undefined) {
+              return;
+            }        
+          }
         }
 
         this.myShips.push({
@@ -359,6 +371,11 @@ window.addEventListener('load', () => {
 
         this.addShips.currentShipIndex++;
         
+      },
+
+      resetMyShips: function() {
+        this.myShips = [];
+        this.addShips.currentShipIndex = 0;
       }
     },
     
