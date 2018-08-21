@@ -16,7 +16,7 @@ window.addEventListener('load', () => {
     el: '#app',
     data: {
       contracts: {},
-      player: "",
+      account: "",
       playerGames: {},
       openGames: {},
       newGameOpponent: "",
@@ -29,7 +29,16 @@ window.addEventListener('load', () => {
     methods: {
 
       initWeb3: function () {
-        return this.initContract();
+        web3.eth.getAccounts((error, accounts) => {
+          if (error) {
+            console.log(error);
+          }
+
+          var account = accounts[0];
+          this.account = account;
+
+          return this.initContract();
+        });
       },
 
       initContract: function () {
@@ -94,65 +103,88 @@ window.addEventListener('load', () => {
               });
             };
             closure();
-            
+
           }
         }).catch(function (err) {
           console.log(err.message);
         });
       },
 
-      /*getOpenGames: function () {
+      getOpenGames: function () {
         this.contracts.Lobby.deployed().then(instance => {
           lobbyInstance = instance;
 
-          return lobbyInstance.getGamesBelongingToPlayer.call();
+          return lobbyInstance.getOpenGames.call();
         }).then(gameAddresses => {
-          console.log("Games List", gameAddresses);
+          console.log("Open Games List", gameAddresses);
           for (let i = 0; i < gameAddresses.length; i++) {
-            var gameAddress = gameAddresses[i];
-            this.$set(this.games, gameAddress, {});
 
-            var battleshipInstance = this.contracts.Battleship.at(gameAddress);
-            battleshipInstance.player1.call().then(val => {
-              console.log("battleship1", val);
-              //this.games[gameAddress].player1 = val;
-              this.$set(this.games[gameAddress], 'player1', val);
-            });
-            battleshipInstance.player2.call().then(val => {
-              console.log("battleship2", val);
-              this.$set(this.games[gameAddress], 'player2', val);
-            });
-            battleshipInstance.gameState.call().then(val => {
-              console.log("battleshipg", val);
-              this.$set(this.games[gameAddress], 'state', val);
-            });
+            if (gameAddresses[i] == "0x0000000000000000000000000000000000000000") {
+              // Skip open games that have been deleted
+              continue;
+            }
+
+            let closure = () => {
+              var gameAddress = gameAddresses[i];
+              this.$set(this.openGames, gameAddress, {
+                gameId: i
+              });
+
+              var battleshipInstance = this.contracts.Battleship.at(gameAddress);
+              battleshipInstance.player1.call().then(val => {
+                console.log("battleship1", gameAddress, val);
+                //this.games[gameAddress].player1 = val;
+                this.$set(this.openGames[gameAddress], 'player1', val);
+              });
+              battleshipInstance.player2.call().then(val => {
+                console.log("battleship2", gameAddress, val);
+                this.$set(this.openGames[gameAddress], 'player2', val);
+              });
+              battleshipInstance.gameState.call().then(val => {
+                console.log("battleshipg", gameAddress, val);
+                this.$set(this.openGames[gameAddress], 'state', val);
+              });
+            };
+            closure();
+
           }
         }).catch(function (err) {
           console.log(err.message);
         });
-      },*/
+      },
 
       newGame: function () {
         console.log("newgame called");
 
-        web3.eth.getAccounts((error, accounts) => {
-          if (error) {
-            console.log(error);
-          }
+        this.contracts.Lobby.deployed().then(lobbyInstance => {
 
-          var account = accounts[0];
+          if (this.newGameOpponent) {
 
-          this.contracts.Lobby.deployed().then(lobbyInstance => {
+            return lobbyInstance.createGameWithOpponent(this.newGameOpponent, { from: this.account });
+
+          } else {
 
             // Execute adopt as a transaction by sending account
-            return lobbyInstance.createOpenGame({ from: account });
-          }).then(result => {
-            return this.getGames();
-          }).catch(err => {
-            console.log(err.message);
-          });
+            return lobbyInstance.createOpenGame({ from: this.account });
+          }
+        }).then(result => {
+          return this.getGames();
+        }).catch(err => {
+          console.log(err.message);
         });
+
       },
+
+      joinOpenGame: function(gameId) {
+        this.contracts.Lobby.deployed().then(lobbyInstance => {
+          // Execute adopt as a transaction by sending account
+          return lobbyInstance.joinOpenGame(gameId, { from: this.account });
+        }).then(result => {
+          return this.getGames();
+        }).catch(err => {
+          console.log(err.message);
+        });
+      }
 
     }
 

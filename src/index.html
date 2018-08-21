@@ -57,6 +57,30 @@
 
             </div>
 
+            <div class="col-xs-12">
+
+                <h1>Join an Open Game</h1>
+
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Opponent</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(game, id) in openGames">
+                        <td>{{ id }}</td>
+                        <td>{{ game.player1 }}</td>
+                        <td v-if="game.player1 == account">Your Game</td><td v-else><a href="#" v-on:click="joinOpenGame(game.gameId)">Join Game</a></td>
+                    </tr>
+                    </tr>
+                </tbody>
+                </table>
+
+            </div>
+
         </div>
         <div class="row">
             <div class="col-xs-12">
@@ -109,6 +133,30 @@
                         <td>Started</td>
                         <td>2018-08-08 10:12:13</td>
                         <td>Enter Game</td>
+                    </tr>
+                </table>
+
+            </div>
+
+            <div class="col-xs-12">
+
+                <h1>Join an Open Game</h1>
+
+                <table class="table table-striped">
+                    <tr>
+                        <th>ID</th>
+                        <th>Opponent</th>
+                        <th></th>
+                    </tr>
+                    <tr>
+                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
+                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
+                        <td>Join Game</td>
+                    </tr>
+                    <tr>
+                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
+                        <td>0x7fcb44a1fcde6add28945125c5bd889f3af29c86</td>
+                        <td>Join Game</td>
                     </tr>
                 </table>
 
