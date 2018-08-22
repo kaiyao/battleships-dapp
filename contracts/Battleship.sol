@@ -61,7 +61,7 @@ contract Battleship {
 
     address owner;
     
-    mapping (address => PlayerInfo) private players;
+    mapping (address => PlayerInfo) public players;
     uint playerCount;
 
     event StateChanged (

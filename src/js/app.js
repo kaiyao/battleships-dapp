@@ -275,8 +275,6 @@ window.addEventListener('load', () => {
       boardHeight: 0,
       boardShips: [],
       myShips: [],
-      myBoard: [],
-      opponentBoard: [],
       addShips: {
         board: [],
         rotation: "horizontal",
@@ -322,13 +320,35 @@ window.addEventListener('load', () => {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
 
         // Get current Game State and subscribe to game state changed events
-        var stateChangedEvent = battleshipInstance.StateChanged({}, {}, function(error, result){
+        var stateChangedEvent = battleshipInstance.StateChanged({}, {}, (error, result) => {
           if (!error) {
             battleshipInstance.gameState.call().then(val => {
               this.gameState = val.toNumber();
             });
             console.log(result);
           }
+        });
+
+        // Get player info
+        battleshipInstance.player1.call().then(val => {
+          console.log("game-player1", this.gameAddress, val, val);
+
+          return battleshipInstance.players.call(val);
+        }).then(val => {
+          console.log(val);
+        });
+
+        // Recall ships from localstorage
+        if (this.myShips.length == 0) {
+          let localStorageKey = this.gameAddress + '*' + this.account;
+          if (localStorage.getItem(localStorageKey) !== null) {
+            let data = JSON.parse(localStorage.getItem(localStorageKey));
+            this.myShips = data;
+          }
+        }
+
+        battleshipInstance.gameState.call().then(val => {
+          this.gameState = val.toNumber();
         });
         battleshipInstance.gameState.call().then(val => {
           this.gameState = val.toNumber();
@@ -351,18 +371,6 @@ window.addEventListener('load', () => {
         }).then(val => {
           console.log("game-boardShips", this.gameAddress, val, val.toString());
           this.boardShips = val.map(x => x.toNumber());
-
-          for (let i = 0; i < this.boardHeight; i++) {
-            //this.myBoard[i] = new Array(this.boardWidth);
-            this.$set(this.myBoard, i, new Array(this.boardWidth));
-          }
-    
-          for (let i = 0; i < this.boardHeight; i++) {
-            //this.opponentBoard[i] = new Array(this.boardWidth);
-            this.$set(this.opponentBoard, i, new Array(this.boardWidth));
-          }
-
-
         });
       },
 
@@ -450,6 +458,9 @@ window.addEventListener('load', () => {
 
       submitHiddenShips: function() {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+
+        let localStorageKey = this.gameAddress + '*' + this.account;
+        localStorage.setItem(localStorageKey, JSON.stringify(this.myShips));
         
         for(let i = 0; i < this.myShips.length; i++) {
           let ship = this.myShips[i];
@@ -459,7 +470,7 @@ window.addEventListener('load', () => {
           let commitHash = keccak256(ship.width, ship.height, ship.x, ship.y, nonce);
           console.log("submit ship", i, commitHash, commitNonceHash);
           battleshipInstance.submitHiddenShip(i, commitHash, commitNonceHash, { from: this.account }).then(response => {
-            console.log("ship " + shipIndex + " submitted");
+            console.log("ship " + i + " submitted");
           });
         };
       },
@@ -472,6 +483,36 @@ window.addEventListener('load', () => {
     
     computed: {
       myShipsBoard: function () {
+        let board = [];
+        
+        if (this.boardWidth == 0 || this.boardHeight == 0) {
+          return [];
+        }
+
+        for (let i = 0; i < this.boardHeight; i++) {
+          board[i] = new Array(this.boardWidth);
+        }
+
+        for (let shipIndex = 0; shipIndex < this.myShips.length; shipIndex++) {
+          
+          let myShip = this.myShips[shipIndex];
+          let x = myShip.x;
+          let y = myShip.y;
+          let width = myShip.width;
+          let height = myShip.height;
+
+          for(let i = y; i < y + height; i++) {
+            for(let j = x; j < x + width; j++) {
+              //console.log("board", board, i, j, shipIndex);
+              board[i][j] = shipIndex;
+            }
+          }
+
+        }
+
+        return board;
+      },
+      opponentShipsBoard: function () {
         let board = [];
         for (let i = 0; i < this.boardHeight; i++) {
           board[i] = new Array(this.boardWidth);
