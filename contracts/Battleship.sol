@@ -122,6 +122,26 @@ contract Battleship {
         }        
     }
 
+    // Submit in the format of [commitHash of ship 1], [commitNonceHash of ship 1], [commitHash of ship 2], [commitNonceHash of ship 2], ...
+    function submitHiddenShipsPacked(bytes32[shipsPerPlayer * 2] hiddenShipsPacked) public {
+        for (uint i = 0; i < shipsPerPlayer; i++) {
+            bytes32 commitHash = hiddenShipsPacked[i * 2];
+            bytes32 commitNonceHash = hiddenShipsPacked[i * 2 + 1];
+            submitHiddenShip(i, commitHash, commitNonceHash);
+        }
+    }
+    
+    // Gets in the format of [commitHash of ship 1], [commitNonceHash of ship 1], [commitHash of ship 2], [commitNonceHash of ship 2], ...
+    function getHiddenShipsPacked() public view returns (bytes32[shipsPerPlayer * 2]) {
+        bytes32[shipsPerPlayer * 2] memory hiddenShipsPacked;
+        for (uint i = 0; i < shipsPerPlayer; i++) {
+            ShipHidden storage ship = players[msg.sender].hiddenShips[i];
+            hiddenShipsPacked[i * 2] = ship.commitHash;
+            hiddenShipsPacked[i * 2 + 1] = ship.commitNonceHash;
+        }
+        return hiddenShipsPacked;
+    }
+
     function checkAllHiddenShipsSubmitted() private view returns (bool) {
         uint player1Ships = 0;
         uint player2Ships = 0;

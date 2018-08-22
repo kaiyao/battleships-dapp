@@ -276,6 +276,11 @@ window.addEventListener('load', () => {
         }).catch(err => {
           console.log(err.message);
         });
+      },
+
+      enterGame: function (gameAddress) {
+        game.gameAddress = "";
+        game.gameAddress = gameAddress;
       }
 
     }
@@ -288,7 +293,7 @@ window.addEventListener('load', () => {
     data: {
       contracts: {},
       account: "",
-      gameAddress: "0x07f5bc02efa268f85e0e4b2c0b1764893930d46f",
+      gameAddress: "",
       gameState: -1,
       boardWidth: 0,
       boardHeight: 0,
@@ -336,6 +341,10 @@ window.addEventListener('load', () => {
       },
 
       initBoard: function () {
+        if (!this.gameAddress) {
+          return;
+        }
+
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
 
         // Get current Game State and subscribe to game state changed events
@@ -358,11 +367,23 @@ window.addEventListener('load', () => {
         });
 
         // Recall ships from localstorage
-        let localStorageKey = this.gameAddress + '*' + this.account;
+        /*let localStorageKey = this.gameAddress + '*' + this.account;
         if (localStorage.getItem(localStorageKey) !== null) {
           let data = JSON.parse(localStorage.getItem(localStorageKey));
           this.myShips = data;
-        }
+        }*/
+
+        this.getHiddenShips().then(hiddenShips => {
+          console.log("getHiddenShips");
+          for (let i = 0; i < hiddenShips.length; i++) {
+            let hiddenShip = hiddenShips[i];
+            let localStorageKey = this.gameAddress + '*' + this.account + '*' + hiddenShip.commitHash;
+            if (localStorage.getItem(localStorageKey) !== null) {
+              let data = JSON.parse(localStorage.getItem(localStorageKey));
+              this.myShips[i] = data;
+            }
+          }
+        });
 
         battleshipInstance.gameState.call().then(val => {
           this.gameState = val.toNumber();
@@ -475,21 +496,41 @@ window.addEventListener('load', () => {
 
       submitHiddenShips: function() {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
-
-        let localStorageKey = this.gameAddress + '*' + this.account;
-        localStorage.setItem(localStorageKey, JSON.stringify(this.myShips));
         
+        let hiddenShipsPacked = [];
         for(let i = 0; i < this.myShips.length; i++) {
           let ship = this.myShips[i];
           let nonce = generateRandomBytes32();
           this.$set(this.myShips[i], "nonce", nonce);
           let commitNonceHash = keccak256(nonce);
           let commitHash = keccak256(ship.width, ship.height, ship.x, ship.y, nonce);
-          console.log("submit ship", i, commitHash, commitNonceHash);
-          battleshipInstance.submitHiddenShip(i, commitHash, commitNonceHash, { from: this.account }).then(response => {
-            console.log("ship " + i + " submitted");
-          });
+          console.log("submit hidden ship", i, commitHash, commitNonceHash);
+          hiddenShipsPacked.push(commitHash, commitNonceHash);
+
+          // store ship hash to ship position locally
+          // (we store the hash rather than object of the ship positions, in case there is some kind of address reuse)
+          let localStorageKey = this.gameAddress + '*' + this.account + '*' + commitHash;
+          localStorage.setItem(localStorageKey, JSON.stringify(this.myShips[i]));
         };
+
+        battleshipInstance.submitHiddenShipsPacked(hiddenShipsPacked, { from: this.account }).then(response => {
+          console.log("hidden ships submitted packed");
+        });
+        
+      },
+
+      getHiddenShips: function() {
+        var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+        return battleshipInstance.getHiddenShipsPacked().then(response => {
+          let hiddenShips = [];
+          for (let i = 0; i < response.length; i += 2) {
+            hiddenShips.push({
+              commitHash: response[i],
+              commitNonceHash: response[i + 1]
+            });
+          }
+          return hiddenShips;
+        });
       },
 
       resetMyShips: function() {
@@ -557,6 +598,11 @@ window.addEventListener('load', () => {
         let gameStateMapping = ['Created', 'PlayersJoined', 'Started', 'Finished', 'Paid'];
         return gameStateMapping[this.gameState];
       }
+    },
+    watch: {
+      gameAddress: function (val) {
+        this.initWeb3();
+      },
     }
   });
 

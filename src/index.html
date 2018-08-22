@@ -82,7 +82,7 @@
                             <td>{{ id }}</td>
                             <td>{{ game.state }}</td>
                             <td>{{ game.startedAt }}</td>
-                            <td>Enter Game</td>
+                            <td><a href="#" v-on:click.prevent="enterGame(id)">Enter Game</a></td>
                         </tr>
                     </tbody>
                 </table>
@@ -106,7 +106,7 @@
                             <td>{{ id }}</td>
                             <td>{{ game.player1 }}</td>
                             <td v-if="game.player1 == account">Your Game</td>
-                            <td v-else><a href="#" v-on:click="joinOpenGame(game.gameId)">Join Game</a></td>
+                            <td v-else><a href="#" v-on:click.prevent="joinOpenGame(game.gameId)">Join Game</a></td>
                         </tr>
                         </tr>
                     </tbody>
