@@ -63,6 +63,25 @@ function generateRandomBytes32() {
 
 window.addEventListener('load', () => {
 
+  window.web3Account = null;
+  window.setInterval(function() {
+
+    web3.eth.getAccounts((error, accounts) => {
+      if (error) {
+        console.log(error);
+      }
+
+      var account = accounts[0];
+      if (account != window.web3Account) {
+        window.web3Account = account;
+        app.initWeb3();
+        game.initWeb3();
+      }
+      
+    });
+
+  }, 2000);
+
   window.web3Provider = null;
   // https://github.com/mesirendon/DappExample/blob/master/src/main.js
   if (typeof web3 !== 'undefined') {
@@ -339,12 +358,10 @@ window.addEventListener('load', () => {
         });
 
         // Recall ships from localstorage
-        if (this.myShips.length == 0) {
-          let localStorageKey = this.gameAddress + '*' + this.account;
-          if (localStorage.getItem(localStorageKey) !== null) {
-            let data = JSON.parse(localStorage.getItem(localStorageKey));
-            this.myShips = data;
-          }
+        let localStorageKey = this.gameAddress + '*' + this.account;
+        if (localStorage.getItem(localStorageKey) !== null) {
+          let data = JSON.parse(localStorage.getItem(localStorageKey));
+          this.myShips = data;
         }
 
         battleshipInstance.gameState.call().then(val => {
