@@ -150,7 +150,7 @@
                 <table class="game-board">
                     <tbody>
                         <tr v-for="row in myShipsBoard">
-                            <td v-for="col in row"></td>
+                            <td v-for="col in row" v-on:click="makeMove(row, col)"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -163,11 +163,11 @@
                 <table class="add-progress-tracker">
                     <tr>
                         <th>Ship Number</th>
-                        <td v-for="(shipLength, i) in boardShips" v-bind:class="{ 'currently-adding': addShips.currentShipIndex == i }">{{ i + 1 }}</td>
+                        <td v-for="(shipLength, i) in boardShips" v-bind:class="{ 'currently-adding': myShips.length == i }">{{ i + 1 }}</td>
                     </tr>
                     <tr>
                         <th>Ship Length</th>
-                        <td v-for="(shipLength, i) in boardShips" v-bind:class="{ 'currently-adding': addShips.currentShipIndex == i }">{{ shipLength }}</td>
+                        <td v-for="(shipLength, i) in boardShips" v-bind:class="{ 'currently-adding': myShips.length == i }">{{ shipLength }}</td>
                     </tr>
                 </table>
 

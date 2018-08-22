@@ -27,7 +27,6 @@ contract Battleship {
         uint x;
         uint y;
         MoveResult result;
-        uint shipNumber; // if hit, fill in the number of the ship hit (index of the boardShips array) here
     }
 
     struct PlayerInfo {
@@ -71,12 +70,14 @@ contract Battleship {
 
     event MoveMade (
         address indexed _from,
-        address indexed _gameAddress
+        uint x,
+        uint y
     );
 
     event MoveUpdated (
         address indexed _from,
-        address indexed _gameAddress
+        MoveResult moveResult,
+        uint shipNumber
     );
     
     constructor() public {
@@ -108,6 +109,16 @@ contract Battleship {
     
     function joinMyself() public {
         joinPlayer(msg.sender);
+    }
+
+    function getOpponentAddress() public view returns (address) {
+        require(msg.sender == player1 || msg.sender == player2);
+        require(player1 != 0 && player2 != 0);
+        if (player1 == msg.sender) {
+            return player2;
+        } else {            
+            return player1;
+        }
     }
 
     function submitHiddenShip(uint shipNumber, bytes32 commitHash, bytes32 commitNonceHash) public {
@@ -161,29 +172,63 @@ contract Battleship {
     }
     
     function makeMove(uint x, uint y) public {
-        require(gameState == GameState.Started);
-        require(msg.sender == player1 || msg.sender == player2);
+        require(gameState == GameState.Started, "Game must be started");
+        require(msg.sender == player1 || msg.sender == player2, "Sender must be player");
         
         // Check that it is the player's turn
         require(
             (msg.sender == player1 && players[player1].movesCount >= players[player2].movesCount) || 
-            (msg.sender == player2 && players[player2].movesCount < players[player1].movesCount)
+            (msg.sender == player2 && players[player2].movesCount < players[player1].movesCount),
+            "Must be player's turn"
         );
         // Check that player has already submitted move result for previous opponent move
         require(
             (msg.sender == player1 && players[player1].movesCount == 0) ||
             (msg.sender == player1 && players[player2].moves[players[player2].movesCount - 1].result != MoveResult.Unknown) || 
-            (msg.sender == player2 && players[player1].moves[players[player1].movesCount - 1].result != MoveResult.Unknown)
+            (msg.sender == player2 && players[player1].moves[players[player1].movesCount - 1].result != MoveResult.Unknown),
+            "Must have submited move result"
         );
         
-        players[msg.sender].moves[players[msg.sender].movesCount] = Move(x, y, MoveResult.Unknown, 0);
+        players[msg.sender].moves[players[msg.sender].movesCount] = Move(x, y, MoveResult.Unknown);
         players[msg.sender].movesCount++;
+
+        emit MoveMade(msg.sender, x, y);
+    }
+
+    function getPlayerMovesPacked(address player) public view returns (uint[boardWidth * boardHeight * 3]) {
+        uint[boardWidth * boardHeight * 3] memory moves;
+        for (uint i = 0; i < getPlayerMovesCount(player); i++) {
+            Move storage move = players[player].moves[i];
+            moves[i * 3 + 0] = move.x;
+            moves[i * 3 + 1] = move.y;
+            moves[i * 3 + 2] = convertMoveResultToUInt(move.result);
+        }
+        return moves;
+    }
+
+    function getPlayerMovesCount(address player) public view returns (uint) {
+        return players[player].movesCount;
+    }
+
+    function getPlayerMove(address player, uint index) public view returns (uint[3]) {
+        Move storage move = players[player].moves[index];
+        uint[3] memory retValue;
+        retValue[0] = move.x;
+        retValue[1] = move.y;
+        retValue[2] = convertMoveResultToUInt(move.result);
+        return retValue;
+    }
+
+    function convertMoveResultToUInt(MoveResult result) public pure returns (uint) {
+        if (result == MoveResult.Unknown) return 0;
+        if (result == MoveResult.Miss) return 1;
+        if (result == MoveResult.Hit) return 2;
     }
     
     function updateLastOpponentMoveWithResult(MoveResult result, uint shipNumber) public {
-        require(gameState == GameState.Started);
-        require(msg.sender == player1 || msg.sender == player2);
-        require(result == MoveResult.Miss || (shipNumber >= 0 && shipNumber < shipsPerPlayer));
+        require(gameState == GameState.Started, "Game must be started");
+        require(msg.sender == player1 || msg.sender == player2, "Sender must be player");
+        //require(result == MoveResult.Miss || (shipNumber >= 0 && shipNumber < shipsPerPlayer), "Result must be miss or shipnumber");
         
         // You cannot update with "unknown" result
         require(result == MoveResult.Hit || result == MoveResult.Miss);
@@ -192,18 +237,25 @@ contract Battleship {
             opponent = player2;
         }
         uint opponentMoveCount = players[opponent].movesCount;
-        require(players[opponent].moves[opponentMoveCount - 1].result == MoveResult.Unknown);
+        //require(players[opponent].moves[opponentMoveCount - 1].result == MoveResult.Unknown);
 
         players[opponent].moves[opponentMoveCount - 1].result = result;
         if (result == MoveResult.Hit) {
-            players[opponent].moves[opponentMoveCount - 1].shipNumber = shipNumber;
+            //players[opponent].moves[opponentMoveCount - 1].shipNumber = shipNumber;
             players[opponent].hitCount++;
         }
+
+        emit MoveUpdated(msg.sender, result, shipNumber);
 
         if (players[opponent].hitCount >= shipSpaces) {
             // opponent has won!
             setGameEnd();
         }
+    }
+
+    function makeMoveAndUpdateLastMoveWithResult(uint x, uint y, MoveResult result, uint shipNumber) public {
+        updateLastOpponentMoveWithResult(result, shipNumber);
+        makeMove(x, y);
     }
     
     function setGameEnd() private {

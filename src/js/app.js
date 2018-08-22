@@ -63,7 +63,7 @@ function generateRandomBytes32() {
 
 window.addEventListener('load', () => {
 
-  window.web3Account = null;
+  /*window.web3Account = null;
   window.setInterval(function() {
 
     web3.eth.getAccounts((error, accounts) => {
@@ -80,7 +80,7 @@ window.addEventListener('load', () => {
       
     });
 
-  }, 2000);
+  }, 2000);*/
 
   window.web3Provider = null;
   // https://github.com/mesirendon/DappExample/blob/master/src/main.js
@@ -298,12 +298,14 @@ window.addEventListener('load', () => {
       boardWidth: 0,
       boardHeight: 0,
       boardShips: [],
-      myShips: [],
       addShips: {
         board: [],
-        rotation: "horizontal",
-        currentShipIndex: 0
-      }
+        rotation: "horizontal"
+      },
+      myShips: [],     
+      myMoves: [],
+      opponent: "",
+      opponentMoves: []
     },
     created: function () {
 
@@ -346,6 +348,9 @@ window.addEventListener('load', () => {
         }
 
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+        battleshipInstance.allEvents({ address: null }, (error, log) => {
+          console.log("game event triggered", error, log);
+        });
 
         // Get current Game State and subscribe to game state changed events
         var stateChangedEvent = battleshipInstance.StateChanged({}, {}, (error, result) => {
@@ -357,7 +362,7 @@ window.addEventListener('load', () => {
           }
         });
 
-        // Get player info
+        // Get player info (not really used)
         battleshipInstance.player1.call().then(val => {
           console.log("game-player1", this.gameAddress, val, val);
 
@@ -373,6 +378,7 @@ window.addEventListener('load', () => {
           this.myShips = data;
         }*/
 
+        this.myShips = [];
         this.getHiddenShips().then(hiddenShips => {
           console.log("getHiddenShips");
           for (let i = 0; i < hiddenShips.length; i++) {
@@ -383,6 +389,50 @@ window.addEventListener('load', () => {
               this.myShips[i] = data;
             }
           }
+        });
+
+        // Get opponent
+        battleshipInstance.getOpponentAddress.call().then(val => {
+          console.log("game-opponent", this.gameAddress, val);
+          this.opponent = val;
+
+          // Get opponent moves count
+          return battleshipInstance.getPlayerMovesCount.call(this.opponent);
+        }).then(val => {
+          let movesCount = val;
+
+          // Get opponent moves
+          return battleshipInstance.getPlayerMovesPacked.call(this.opponent).then(val => {
+            console.log("game-opponentmoves", val);
+            this.opponentMoves = [];
+            for(let i = 0; i < movesCount; i++) {
+              this.opponentMoves.push({
+                x: val[i * 3].toNumber(),
+                y: val[i * 3 + 1].toNumber(),
+                result: val[i * 3 + 2].toNumber()
+              });
+            }
+            console.log("game-opponentmoves2", this.opponentMoves);
+          });
+        });
+        
+        // Get my moves count
+        battleshipInstance.getPlayerMovesCount.call(this.account).then(val => {
+          let movesCount = val;
+
+          // Get my moves
+          return battleshipInstance.getPlayerMovesPacked.call(this.account).then(val => {
+            console.log("game-mymoves", val);
+            this.myMoves = [];
+            for(let i = 0; i < movesCount; i++) {
+              this.myMoves.push({
+                x: val[i].toNumber(),
+                y: val[i * 3 + 1].toNumber(),
+                result: val[i * 3 + 2].toNumber()
+              });
+              console.log("game-mymoves2", this.myMoves);
+            }
+          });
         });
 
         battleshipInstance.gameState.call().then(val => {
@@ -420,7 +470,7 @@ window.addEventListener('load', () => {
       },
 
       addShipHighlightPlacement: function (x, y) {
-        let shipLength = this.boardShips[this.addShips.currentShipIndex];
+        let shipLength = this.boardShips[this.myShips.length];
         let shipRotation = this.addShips.rotation;
         let width = 0; 
         let height = 0;
@@ -456,7 +506,9 @@ window.addEventListener('load', () => {
       },
 
       addShipSavePlacement: function (x, y) {
-        let shipLength = this.boardShips[this.addShips.currentShipIndex];
+        let currentShipIndex = this.myShips.length;
+
+        let shipLength = this.boardShips[currentShipIndex];
         let shipRotation = this.addShips.rotation;
         let width = 0; 
         let height = 0;
@@ -489,8 +541,6 @@ window.addEventListener('load', () => {
           x: x,
           y: y
         });
-
-        this.addShips.currentShipIndex++;
         
       },
 
@@ -512,6 +562,8 @@ window.addEventListener('load', () => {
           let localStorageKey = this.gameAddress + '*' + this.account + '*' + commitHash;
           localStorage.setItem(localStorageKey, JSON.stringify(this.myShips[i]));
         };
+
+        console.log(hiddenShipsPacked);
 
         battleshipInstance.submitHiddenShipsPacked(hiddenShipsPacked, { from: this.account }).then(response => {
           console.log("hidden ships submitted packed");
@@ -535,8 +587,44 @@ window.addEventListener('load', () => {
 
       resetMyShips: function() {
         this.myShips = [];
-        this.addShips.currentShipIndex = 0;
-      }
+      },
+
+      makeMove: function(x, y) {
+        var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+
+        // If opponent has already made a move, we need to respond first
+        if (this.opponentMoves.length > 0) {
+          console.log("need to report last opponent move status");
+          let lastMove = this.opponentMoves[this.opponentMoves.length - 1];
+          let moveResult = 'Unknown';
+          let shipNumber = 0;
+          if (this.myShipsBoard[lastMove.y][lastMove.x] === undefined) {
+            moveResult = 'Miss';
+          } else {
+            moveResult = 'Hit';
+            shipNumber = this.myShipsBoard[lastMove.y][lastMove.x];
+          }
+          let moveResultNumber = this.convertMoveResultToNumber(moveResult);
+          battleshipInstance.makeMoveAndUpdateLastMoveWithResult(x * 1, y * 1, moveResult * 1, shipNumber * 1, { from: this.account }).then(response => {
+            console.log("move submitted and updated last move");
+          });
+        } else {        
+          battleshipInstance.makeMove(x * 1, y * 1, { from: this.account }).then(response => {
+            console.log("move submitted");
+          });
+        }
+      },
+
+      convertMoveResultToNumber: function (moveResult) {
+        let moveResultEnum = {'Unknown': 0, 'Miss': 1, 'Hit': 2};
+        return moveResultEnum[moveResult];
+      },
+
+      convertNumberToMoveResult: function (moveResultNumber) {
+        let moveResultEnum = ['Unknown', 'Miss', 'Hit'];
+        return moveResultEnum[moveResultNumber];
+      },
+
     },
     
     computed: {
