@@ -1,5 +1,66 @@
 'use strict';
 
+// https://ethereum.stackexchange.com/questions/30024/how-to-keccak256-multiple-types-in-web3js-to-match-solidity-keccak256
+function keccak256(...args) {
+  args = args.map(arg => {
+    if (typeof arg === 'string') {
+      if (arg.substring(0, 2) === '0x') {
+          return arg.slice(2)
+      } else {
+          return web3.toHex(arg).slice(2)
+      }
+    }
+
+    if (typeof arg === 'number') {
+      return leftPad((arg).toString(16), 64, 0)
+    } else {
+      return ''
+    }
+  })
+
+  args = args.join('')
+
+  return web3.sha3(args, { encoding: 'hex' })
+}
+
+function leftPad (str, len, ch) {
+  // convert `str` to a `string`
+  str = str + '';
+  // `len` is the `pad`'s length now
+  len = len - str.length;
+  // doesn't need to pad
+  if (len <= 0) return str;
+  // `ch` defaults to `' '`
+  if (!ch && ch !== 0) ch = ' ';
+  // convert `ch` to a `string` cuz it could be a number
+  ch = ch + '';
+  // cache common use cases
+  if (ch === ' ' && len < 10) return cache[len] + str;
+  // `pad` starts with an empty string
+  var pad = '';
+  // loop
+  while (true) {
+    // add `ch` to `pad` if `len` is odd
+    if (len & 1) pad += ch;
+    // divide `len` by 2, ditch the remainder
+    len >>= 1;
+    // "double" the `ch` so this operation count grows logarithmically on `len`
+    // each time `ch` is "doubled", the `len` would need to be "doubled" too
+    // similar to finding a value in binary search tree, hence O(log(n))
+    if (len) ch += ch;
+    // `len` is 0, exit the loop
+    else break;
+  }
+  // pad `str`!
+  return pad + str;
+}
+
+function generateRandomBytes32() {
+  let bytes = secureRandom(32, {type: 'Array'});
+  let hexBytes = bytes.map(x => x.toString(16));
+  return "0x" + hexBytes.join("");
+}
+
 window.addEventListener('load', () => {
 
   window.web3Provider = null;
@@ -208,7 +269,8 @@ window.addEventListener('load', () => {
     data: {
       contracts: {},
       account: "",
-      gameAddress: "0xa52fed3d29211300a0830003c8b5e437f18c17ec",
+      gameAddress: "0x07f5bc02efa268f85e0e4b2c0b1764893930d46f",
+      gameState: -1,
       boardWidth: 0,
       boardHeight: 0,
       boardShips: [],
@@ -258,6 +320,19 @@ window.addEventListener('load', () => {
 
       initBoard: function () {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+
+        // Get current Game State and subscribe to game state changed events
+        var stateChangedEvent = battleshipInstance.StateChanged({}, {}, function(error, result){
+          if (!error) {
+            battleshipInstance.gameState.call().then(val => {
+              this.gameState = val.toNumber();
+            });
+            console.log(result);
+          }
+        });
+        battleshipInstance.gameState.call().then(val => {
+          this.gameState = val.toNumber();
+        });
         
         battleshipInstance.player1.call().then(val => {
           console.log("game-player1", this.gameAddress, val, val.toString());
@@ -373,6 +448,22 @@ window.addEventListener('load', () => {
         
       },
 
+      submitHiddenShips: function() {
+        var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+        
+        for(let i = 0; i < this.myShips.length; i++) {
+          let ship = this.myShips[i];
+          let nonce = generateRandomBytes32();
+          this.$set(this.myShips[i], "nonce", nonce);
+          let commitNonceHash = keccak256(nonce);
+          let commitHash = keccak256(ship.width, ship.height, ship.x, ship.y, nonce);
+          console.log("submit ship", i, commitHash, commitNonceHash);
+          battleshipInstance.submitHiddenShip(i, commitHash, commitNonceHash, { from: this.account }).then(response => {
+            console.log("ship " + shipIndex + " submitted");
+          });
+        };
+      },
+
       resetMyShips: function() {
         this.myShips = [];
         this.addShips.currentShipIndex = 0;
@@ -403,6 +494,10 @@ window.addEventListener('load', () => {
         }
 
         return board;
+      },
+      getGameStateString: function () {
+        let gameStateMapping = ['Created', 'PlayersJoined', 'Started', 'Finished', 'Paid'];
+        return gameStateMapping[this.gameState];
       }
     }
   });

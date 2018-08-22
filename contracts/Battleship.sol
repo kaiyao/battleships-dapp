@@ -63,6 +63,21 @@ contract Battleship {
     
     mapping (address => PlayerInfo) private players;
     uint playerCount;
+
+    event StateChanged (
+        address indexed _from,
+        GameState newState
+    );
+
+    event MoveMade (
+        address indexed _from,
+        address indexed _gameAddress
+    );
+
+    event MoveUpdated (
+        address indexed _from,
+        address indexed _gameAddress
+    );
     
     constructor() public {
         owner = msg.sender;     
@@ -85,6 +100,10 @@ contract Battleship {
         }
 
         playerCount++;
+        if (playerCount == 2) {
+            gameState = GameState.PlayersJoined;
+            emit StateChanged(msg.sender, gameState);
+        }
     } 
     
     function joinMyself() public {
@@ -99,6 +118,7 @@ contract Battleship {
         players[msg.sender].hiddenShips[shipNumber] = ShipHidden(commitHash, commitNonceHash);
         if (checkAllHiddenShipsSubmitted()) {
             gameState = GameState.Started;
+            emit StateChanged(msg.sender, gameState);
         }        
     }
 
@@ -170,6 +190,7 @@ contract Battleship {
         require(gameState == GameState.Started);
         require(msg.sender == player1 || msg.sender == player2);
         gameState = GameState.Finished;
+        emit StateChanged(msg.sender, gameState);
     }
     
     function revealShip(uint shipNumber, uint width, uint height, uint x, uint y) public {
