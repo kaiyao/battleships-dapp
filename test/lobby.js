@@ -1,5 +1,6 @@
 const Lobby = artifacts.require("Lobby");
 const Battleship = artifacts.require("Battleship");
+const catchRevert = require("./exceptions.js").catchRevert;
 
 contract('Lobby open games', async (accounts) => {
 
@@ -131,6 +132,36 @@ contract('Lobby non-open games', async (accounts) => {
 
         assert(await game.player1() == alice, "first player should be alice");
         assert(await game.player2() == bob, "second player should be bob");
+    });
+
+});
+
+contract('Lobby test add two same players', async (accounts) => {
+
+    const owner = accounts[0];
+    const alice = accounts[1];
+    const bob = accounts[2];
+    const emptyAddress = '0x0000000000000000000000000000000000000000';
+
+    it("should not be allowed to create game with opponent being the same player as caller", async () => {
+        let instance = await Lobby.deployed();
+        
+        let games = await instance.getGamesBelongingToPlayer({from: alice});
+        assert.equal(games.length, 0, "list of games should be empty at the start");
+        
+        await catchRevert(instance.createGameWithOpponent(alice, {from: alice}));
+    });
+
+    it("should not be allowed to join game with same player as first player", async () => {
+        let instance = await Lobby.deployed();
+        
+        let games = await instance.getGamesBelongingToPlayer({from: alice});
+        assert.equal(games.length, 0, "list of games should be empty at the start");
+
+        await instance.createOpenGame({from: alice});
+
+        const openGameIndex = 0;
+        await catchRevert(instance.joinOpenGame(openGameIndex, {from: alice}));
     });
 
 });
