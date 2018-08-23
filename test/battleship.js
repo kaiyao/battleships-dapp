@@ -345,3 +345,64 @@ contract('Game make shots ' + assumptionsReminder, async (accounts) => {
 
     });
 });
+
+contract('Game finishing ' + assumptionsReminder, async (accounts) => {
+    const owner = accounts[0];
+    const alice = accounts[1];
+    const bob = accounts[2];
+    const carol = accounts[3];
+
+    let boardShips;
+
+    beforeEach(async () => {
+        let instance = await Battleship.new();
+        boardShips = await instance.getBoardShips();
+        var maxShipLength = boardShips.reduce(function(a, b) {
+            return Math.max(a, b);
+        });
+
+        await instance.joinPlayer(alice);
+        await instance.joinPlayer(bob);
+
+        for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
+            let shipWidth = boardShips[shipNumber];
+            // just put the ships next to each other
+            let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
+            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
+            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
+            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+        }
+
+        // Play until all the ships have been hit except last ship (boardShips.length - 1 to exclude last row)
+        for (let y = 0; y < boardShips.length - 1; y++) {
+            // maxShipLength + 1 to make it easier to calculate stuff (don't have to handle wrapping)
+            for (let x = 0; x < maxShipLength + 1; x++) {
+                console.log("alice", x, y);
+                if (y == 0 && x == 0) { // first move
+                    await instance.makeMove(x, y, {from: alice});
+                } else if (x > 0 && x < boardShips[y]) { // if ship is length 5, x = 1 .. 5 is when opponent put x = 0 .. 4 which is hit
+                    await instance.makeMoveAndUpdateLastMoveWithResult(x, y, convertMoveResultToNumber('Hit'), y, {from: alice}); 
+                } else if (x == boardShips[y]) { // if ship is length 5, at x = 5, opponent just put x = 4 and sunk the ship in previous move
+                    await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(x, y, convertMoveResultToNumber('Hit'), y, boardShips[y], 1, 0, y, testNonce, {from: alice});
+                } else {
+                    await instance.makeMoveAndUpdateLastMoveWithResult(x, y, convertMoveResultToNumber('Miss'), 0, {from: alice}); 
+                }
+
+                console.log("bob", x, y);
+                if (x < boardShips[y] - 1) { // if ship is length 5, x = 0 .. 4 is hit
+                    await instance.makeMoveAndUpdateLastMoveWithResult(x, y, convertMoveResultToNumber('Hit'), y, {from: bob}); 
+                } else if (x == boardShips[y] - 1) { // if ship is length 5, at x = 4, opponent just put sunk the ship in previous move
+                    await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(x, y, convertMoveResultToNumber('Hit'), y, boardShips[y], 1, 0, y, testNonce, {from: bob});
+                } else {
+                    await instance.makeMoveAndUpdateLastMoveWithResult(x, y, convertMoveResultToNumber('Miss'), 0, {from: bob}); 
+                }
+            }
+        }
+
+        contract = instance;
+    });
+
+    it("todo", async () => {
+        let instance = contract;
+    });
+});
