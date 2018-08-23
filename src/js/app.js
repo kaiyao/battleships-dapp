@@ -430,13 +430,18 @@ window.addEventListener('load', () => {
           // Get opponent moves
           return battleshipInstance.getPlayerMovesPacked.call(this.opponent).then(val => {
             console.log("game-opponentmoves", val);
+            let movesX = val[0];
+            let movesY = val[1];
+            let movesResult = val[2];
+            let movesShipNumber = val[3];
+
             this.opponentMoves = [];
             for(let i = 0; i < movesCount; i++) {
               this.opponentMoves.push({
-                x: val[i * 4].toNumber(),
-                y: val[i * 4 + 1].toNumber(),
-                result: this.convertNumberToMoveResult(val[i * 4 + 2].toNumber()),
-                shipNumber: val[i * 4 + 3].toNumber()
+                x: movesX[i].toNumber(),
+                y: movesY[i].toNumber(),
+                result: this.convertNumberToMoveResult(movesResult[i].toNumber()),
+                shipNumber: movesShipNumber[i].toNumber()
               });
             }
             console.log("game-opponentmoves2", this.opponentMoves);
@@ -450,13 +455,18 @@ window.addEventListener('load', () => {
           // Get my moves
           return battleshipInstance.getPlayerMovesPacked.call(this.account).then(val => {
             console.log("game-mymoves", val);
+            let movesX = val[0];
+            let movesY = val[1];
+            let movesResult = val[2];
+            let movesShipNumber = val[3];
+
             this.myMoves = [];
             for(let i = 0; i < movesCount; i++) {
               this.myMoves.push({
-                x: val[i * 4].toNumber(),
-                y: val[i * 4 + 1].toNumber(),
-                result: this.convertNumberToMoveResult(val[i * 4 + 2].toNumber()),
-                shipNumber: val[i * 4 + 3].toNumber()
+                x: movesX[i].toNumber(),
+                y: movesY[i].toNumber(),
+                result: this.convertNumberToMoveResult(movesResult[i].toNumber()),
+                shipNumber: movesShipNumber[i].toNumber()
               });
               console.log("game-mymoves2", this.myMoves);
             }
@@ -560,7 +570,8 @@ window.addEventListener('load', () => {
       submitHiddenShips: function() {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
         
-        let hiddenShipsPacked = [];
+        let commitHashes = [];
+        let commitNonceHashes = [];
         for(let i = 0; i < this.myShips.length; i++) {
           let ship = this.myShips[i];
           let nonce = generateRandomBytes32();
@@ -568,7 +579,8 @@ window.addEventListener('load', () => {
           let commitNonceHash = keccak256(nonce);
           let commitHash = keccak256(ship.width, ship.height, ship.x, ship.y, nonce);
           console.log("submit hidden ship", i, commitHash, commitNonceHash);
-          hiddenShipsPacked.push(commitHash, commitNonceHash);
+          commitHashes.push(commitHash);
+          commitNonceHashes.push(commitNonceHash);
 
           // store ship hash to ship position locally
           // (we store the hash rather than object of the ship positions, in case there is some kind of address reuse)
@@ -576,9 +588,9 @@ window.addEventListener('load', () => {
           localStorage.setItem(localStorageKey, JSON.stringify(this.myShips[i]));
         };
 
-        console.log(hiddenShipsPacked);
+        console.log(commitHashes, commitNonceHashes);
 
-        battleshipInstance.submitHiddenShipsPacked(hiddenShipsPacked, { from: this.account }).then(response => {
+        battleshipInstance.submitHiddenShipsPacked(commitHashes, commitNonceHashes, { from: this.account }).then(response => {
           console.log("hidden ships submitted packed");
         });
         
@@ -588,10 +600,12 @@ window.addEventListener('load', () => {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
         return battleshipInstance.getHiddenShipsPacked().then(response => {
           let hiddenShips = [];
-          for (let i = 0; i < response.length; i += 2) {
+          let commitHashes = response[0];
+          let commitNonceHashes = response[1];
+          for (let i = 0; i < commitHashes.length; i++) {
             hiddenShips.push({
-              commitHash: response[i],
-              commitNonceHash: response[i + 1]
+              commitHash: commitHashes[i],
+              commitNonceHash: commitNonceHashes[i]
             });
           }
           return hiddenShips;

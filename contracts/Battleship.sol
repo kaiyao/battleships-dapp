@@ -156,24 +156,27 @@ contract Battleship {
         }        
     }
 
-    // Submit in the format of [commitHash of ship 1], [commitNonceHash of ship 1], [commitHash of ship 2], [commitNonceHash of ship 2], ...
-    function submitHiddenShipsPacked(bytes32[shipsPerPlayer * 2] hiddenShipsPacked) public {
+    /** @dev Submits hidden ships (the commit for the ship positions) in a batch
+      * @param commitHashes An array of the hashes for the ship commits. Index 0 = ship 0, index 1 = ship 1, etc.
+      * @param commitNonceHashes An array of the hash of the nonces
+      */
+    function submitHiddenShipsPacked(bytes32[shipsPerPlayer] commitHashes, bytes32[shipsPerPlayer] commitNonceHashes) public {
         for (uint i = 0; i < shipsPerPlayer; i++) {
-            bytes32 commitHash = hiddenShipsPacked[i * 2];
-            bytes32 commitNonceHash = hiddenShipsPacked[i * 2 + 1];
+            bytes32 commitHash = commitHashes[i];
+            bytes32 commitNonceHash = commitNonceHashes[i];
             submitHiddenShip(i, commitHash, commitNonceHash);
         }
     }
     
-    // Gets in the format of [commitHash of ship 1], [commitNonceHash of ship 1], [commitHash of ship 2], [commitNonceHash of ship 2], ...
-    function getHiddenShipsPacked() public view returns (bytes32[shipsPerPlayer * 2]) {
-        bytes32[shipsPerPlayer * 2] memory hiddenShipsPacked;
+    function getHiddenShipsPacked() public view returns (bytes32[shipsPerPlayer], bytes32[shipsPerPlayer]) {
+        bytes32[shipsPerPlayer] memory commitHashes;
+        bytes32[shipsPerPlayer] memory commitNonceHashes;
         for (uint i = 0; i < shipsPerPlayer; i++) {
             ShipHidden storage ship = players[msg.sender].hiddenShips[i];
-            hiddenShipsPacked[i * 2] = ship.commitHash;
-            hiddenShipsPacked[i * 2 + 1] = ship.commitNonceHash;
+            commitHashes[i] = ship.commitHash;
+            commitNonceHashes[i] = ship.commitNonceHash;
         }
-        return hiddenShipsPacked;
+        return (commitHashes, commitNonceHashes);
     }
 
     function checkAllHiddenShipsSubmitted() private view returns (bool) {
@@ -229,16 +232,19 @@ contract Battleship {
         emit MoveMade(msg.sender, x, y);
     }
 
-    function getPlayerMovesPacked(address player) public view returns (uint[boardWidth * boardHeight * 4]) {
-        uint[boardWidth * boardHeight * 4] memory moves;
+    function getPlayerMovesPacked(address player) public view returns (uint[boardWidth * boardHeight], uint[boardWidth * boardHeight], MoveResult[boardWidth * boardHeight], uint[boardWidth * boardHeight]) {
+        uint[boardWidth * boardHeight] memory movesX;
+        uint[boardWidth * boardHeight] memory movesY;
+        MoveResult[boardWidth * boardHeight] memory movesResult;
+        uint[boardWidth * boardHeight] memory movesShipNumber;
         for (uint i = 0; i < getPlayerMovesCount(player); i++) {
             Move storage move = players[player].moves[i];
-            moves[i * 4 + 0] = move.x;
-            moves[i * 4 + 1] = move.y;
-            moves[i * 4 + 2] = convertMoveResultToUInt(move.result);
-            moves[i * 4 + 3] = move.shipNumber;
+            movesX[i] = move.x;
+            movesY[i] = move.y;
+            movesResult[i] = move.result;
+            movesShipNumber[i] = move.shipNumber;
         }
-        return moves;
+        return (movesX, movesY, movesResult, movesShipNumber);
     }
 
     function getPlayerMovesCount(address player) public view returns (uint) {
