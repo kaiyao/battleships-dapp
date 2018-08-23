@@ -307,6 +307,7 @@ window.addEventListener('load', () => {
       opponent: "",
       opponentMoves: [],
       whoseTurn: "",
+      waitingForMovesUpdate: false,
     },
     created: function () {
 
@@ -417,7 +418,7 @@ window.addEventListener('load', () => {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
 
         // Get opponent
-        battleshipInstance.getOpponentAddress.call().then(val => {
+        var getOpponentMovesPromise = battleshipInstance.getOpponentAddress.call().then(val => {
           console.log("game-opponent", this.gameAddress, val);
           this.opponent = val;
 
@@ -443,7 +444,7 @@ window.addEventListener('load', () => {
         });
         
         // Get my moves count
-        battleshipInstance.getPlayerMovesCount.call(this.account).then(val => {
+        var getMyMovesPromise = battleshipInstance.getPlayerMovesCount.call(this.account).then(val => {
           let movesCount = val;
 
           // Get my moves
@@ -463,9 +464,14 @@ window.addEventListener('load', () => {
         });
 
         // Get whose turn
-        battleshipInstance.getWhoseTurn.call().then(val => {
+        var getWhoseTurnPromise = battleshipInstance.getWhoseTurn.call().then(val => {
           console.log("Whose turn", val);
           this.whoseTurn = val;
+        });
+
+        Promise.all([getMyMovesPromise, getOpponentMovesPromise, getWhoseTurnPromise]).then(val => {
+          console.log("Updated Moves!", val);
+          this.waitingForMovesUpdate = false;
         });
       },
 
@@ -597,6 +603,26 @@ window.addEventListener('load', () => {
       },
 
       makeMove: function(x, y) {
+        if (this.whoseTurn != this.account) {
+          alert("It's not your turn yet!");
+          return;
+        }
+
+        if (this.waitingForMovesUpdate) {
+          alert("Please wait for the chain to update. If it takes too long you can try to refresh the page.");
+          return;
+        }
+
+        if (this.myMovesBoard[y][x] !== undefined) {
+          alert("You have already made a shot at this coordinate!");
+          return;
+        }
+
+        if (this.myShips.length != this.boardShips.length) {
+          alert("It seems that the data about your ships is missing. Information about your ships is not stored on the blockchain until you have revealed it, therefore it is stored only it localstorage. Please use the same computer/browser to continue the game. Try to refresh the page and see if it works.");
+          return;
+        }
+
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
 
         // If opponent has already made a move, we need to respond first
@@ -615,10 +641,12 @@ window.addEventListener('load', () => {
           console.log(x, y, x * 1, y * 1, moveResultNumber * 1, shipNumber * 1);
           battleshipInstance.makeMoveAndUpdateLastMoveWithResult(x * 1, y * 1, moveResultNumber * 1, shipNumber * 1, { from: this.account }).then(response => {
             console.log("move submitted and updated last move");
+            this.waitingForMovesUpdate = true;
           });
         } else {        
           battleshipInstance.makeMove(x * 1, y * 1, { from: this.account }).then(response => {
             console.log("move submitted");
+            this.waitingForMovesUpdate = true;
           });
         }
       },

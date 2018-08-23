@@ -61,6 +61,9 @@
             padding: 0px 5px;
             text-align: right;
         }
+        #opponent-ships-board td:hover {
+            background-color: lightslategrey;
+        }
     </style>
 </head>
 
@@ -147,8 +150,9 @@
         <div class="row" v-show="getGameStateString == 'Started'">
             <div class="col-xs-6">
                 <h1>Your ships</h1>
-                <p>Your opponent's shots will appear here</p>
-                <table class="game-board">
+                <p>Your opponent's shots will appear here.</p>
+                <p>Red = Hit, White = Miss, Grey = Your ships</p>
+                <table class="game-board" id="my-ships-board">
                     <tbody>
                         <tr v-for="(row, rowIndex) in myShipsBoard">
                             <td v-for="(col, colIndex) in row" v-bind:class="{ 'has-ship': myShipsBoard[rowIndex][colIndex] !== undefined, 'hit': opponentMovesBoard[rowIndex][colIndex] !== undefined && myShipsBoard[rowIndex][colIndex] !== undefined, 'miss': opponentMovesBoard[rowIndex][colIndex] !== undefined && myShipsBoard[rowIndex][colIndex] === undefined }" v-on:mouseover="addShipHighlightPlacement(colIndex, rowIndex)" v-on:mouseout="addShipResetHighlightPlacement" v-on:click="addShipSavePlacement(colIndex, rowIndex)">
@@ -161,8 +165,11 @@
             </div>
             <div class="col-xs-6">
                 <h1>Opponent's ships</h1>
-                <p>Click on a grid below to call a shot</p>
-                <table class="game-board">
+                <p v-if="waitingForMovesUpdate">Waiting for update from the blockchain...</p>
+                <p v-if="!waitingForMovesUpdate && whoseTurn == account">It's your turn! Click on a grid below to call a shot</p>
+                <p v-if="!waitingForMovesUpdate && whoseTurn != account">It's not your turn. Please wait for your opponent to make a move</p>
+                <p>Red = Hit, White = Miss, Yellow = Waiting for confirmation</p>
+                <table class="game-board" id="opponent-ships-board">
                     <tbody>
                         <tr v-for="(row, rowIndex) in myShipsBoard">
                             <td v-for="(col, colIndex) in row"  v-bind:class="{ 'hit': myMovesBoard[rowIndex][colIndex] !== undefined && myMovesBoard[rowIndex][colIndex].result == 'Hit', 'miss': myMovesBoard[rowIndex][colIndex] !== undefined && myMovesBoard[rowIndex][colIndex].result == 'Miss', 'unknown': myMovesBoard[rowIndex][colIndex] !== undefined && myMovesBoard[rowIndex][colIndex].result == 'Unknown' }" v-on:click="makeMove(colIndex, rowIndex)">
@@ -193,7 +200,7 @@
                 <!-- <div v-if="addShips.currentShipIndex < this.boardShips.length">
                     Adding Ship Number {{ addShips.currentShipIndex + 1 }} of length {{ boardShips[addShips.currentShipIndex] }}
                 </div> -->
-                <table class="game-board">
+                <table class="game-board" id="add-ships-board">
                     <tbody>
                         <tr v-for="(row, rowIndex) in myShipsBoard">
                             <td v-for="(col, colIndex) in row" v-bind:class="{ 'has-ship': myShipsBoard[rowIndex][colIndex] !== undefined, valid: addShips.board[rowIndex] && addShips.board[rowIndex][colIndex] == 'valid' ? true : false, invalid: addShips.board[rowIndex] && addShips.board[rowIndex][colIndex] == 'invalid' ? true : false }" v-on:mouseover="addShipHighlightPlacement(colIndex, rowIndex)" v-on:mouseout="addShipResetHighlightPlacement" v-on:click="addShipSavePlacement(colIndex, rowIndex)">
