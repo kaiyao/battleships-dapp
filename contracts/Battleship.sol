@@ -54,7 +54,7 @@ contract Battleship {
         PayoutReady: Winner has been determined, players can claim their payment
     */
     //enum GameState { Created, PlayersJoined, Started, Ended, ShipsRevealed, WinnerDeclared } ????
-    enum GameState { Created, PlayersJoined, Started, Finished, Paid }
+    enum GameState { Created, PlayersJoined, Started, Finished, ShipsRevealed, Ended }
     GameState public gameState;
 
     // game must start within time limit of creation otherwise refund
@@ -320,18 +320,18 @@ contract Battleship {
 
 
     function checkAllShipsRevealed() public view returns (bool) {
-        uint player1Ships = 0;
-        uint player2Ships = 0;
+        return (checkPlayerShipsRevealed(player1) && checkPlayerShipsRevealed(player2));
+    }
+
+    function checkPlayerShipsRevealed(address player) public view returns (bool) {
+        uint playerShips;
         for (uint i = 0; i < shipsPerPlayer; i++) {
             // We only check the width and height, as x, y are allowed to be zero
-            if (players[player1].revealShips[i].width != 0 && players[player1].revealShips[i].height != 0) {
-                player1Ships++;
-            }
-            if (players[player1].revealShips[i].width != 0 && players[player1].revealShips[i].height != 0) {
-                player2Ships++;
+            if (players[player].revealShips[i].width != 0 && players[player].revealShips[i].height != 0) {
+                playerShips++;
             }
         }
-        if (player1Ships >= shipsPerPlayer && player2Ships >= shipsPerPlayer) {
+        if (playerShips >= shipsPerPlayer) {
             return true;
         } else {
             return false;
@@ -365,9 +365,32 @@ contract Battleship {
         }
     }
     
-    function checkWinner() public view returns (address) {
-        require(gameState == GameState.Finished);
-        // Check that both players have submitted their ships and nonce
+    function gameFinishedAction() public view returns (address) {
+        require(gameState == GameState.Finished, "Game must be finished");
+        
+        if (block.timestamp - finishedAt > 24 * 60 * 60) {
+            if (checkPlayerShipsRevealed(player1) == false && checkPlayerShipsRevealed(player2) == false) {
+                // draw
+            } else if (checkPlayerShipsRevealed(player1) == true && checkPlayerShipsRevealed(player2) == false) {
+                // player 1 wins because player 2 did not reveal
+            } else if (checkPlayerShipsRevealed(player1) == false && checkPlayerShipsRevealed(player2) == true) {
+                // player 2 wins because player 1 did not reveal
+            } else {
+                // both players have revealed (presumably before the time limit is up), so we check for the winner
+            }
+        } else {
+            if (checkPlayerShipsRevealed(player1) == true && checkPlayerShipsRevealed(player2) == true) {
+                // both players have revealed, so we check for the winner
+            }
+        }
+    }
+
+    function checkWinnerWhenBothPlayerRevealed() public returns (address) {
+        address winner;
+
+        if (checkShipPlacementSanityForPlayer == )
+
+
     }
     
 }
