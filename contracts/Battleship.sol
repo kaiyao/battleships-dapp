@@ -143,6 +143,16 @@ contract Battleship {
         }
     }
 
+    function calculateCommitHash(uint width, uint height, uint x, uint y, bytes32 nonce) public pure returns (bytes32) {
+        bytes32 calculatedCommitHash = keccak256(abi.encodePacked(width, height, x, y, nonce));
+        return calculatedCommitHash;
+    }
+
+    function calculateCommitNonceHash(bytes32 nonce) public pure returns (bytes32) {
+        bytes32 calculatedCommitNonceHash = keccak256(abi.encodePacked(nonce));
+        return calculatedCommitNonceHash;
+    }
+
     function submitHiddenShip(uint shipNumber, bytes32 commitHash, bytes32 commitNonceHash) public {
         require(gameState == GameState.Created || gameState == GameState.PlayersJoined);
         require(shipNumber >=0 && shipNumber < shipsPerPlayer);
