@@ -19,6 +19,10 @@
     <![endif]-->
 
     <style>
+        .game-board {
+            background-color: dodgerblue;
+        }
+
         .game-board td {
             border: 1px solid #000;
             width: 30px;
@@ -33,6 +37,15 @@
         }
         .game-board .invalid {
             background-color: lightcoral; 
+        }
+        .game-board .miss {
+            background-color: white;
+        }
+        .game-board .hit {
+            background-color: red; 
+        }
+        .game-board .unknown {
+            background-color: yellow; 
         }
         .add-ships .add-progress-tracker .currently-adding {
             background-color: lightgreen;
@@ -137,7 +150,7 @@
                 <table class="game-board">
                     <tbody>
                         <tr v-for="(row, rowIndex) in myShipsBoard">
-                            <td v-for="(col, colIndex) in row" v-bind:class="{ 'has-ship': myShipsBoard[rowIndex][colIndex] !== undefined, 'hit': false, 'miss': false }" v-on:mouseover="addShipHighlightPlacement(colIndex, rowIndex)" v-on:mouseout="addShipResetHighlightPlacement" v-on:click="addShipSavePlacement(colIndex, rowIndex)">
+                            <td v-for="(col, colIndex) in row" v-bind:class="{ 'has-ship': myShipsBoard[rowIndex][colIndex] !== undefined, 'hit': opponentMovesBoard[rowIndex][colIndex] !== undefined && myShipsBoard[rowIndex][colIndex] !== undefined, 'miss': opponentMovesBoard[rowIndex][colIndex] !== undefined && myShipsBoard[rowIndex][colIndex] === undefined }" v-on:mouseover="addShipHighlightPlacement(colIndex, rowIndex)" v-on:mouseout="addShipResetHighlightPlacement" v-on:click="addShipSavePlacement(colIndex, rowIndex)">
                                 <!-- {{rowIndex}},{{colIndex}},{{ addBoard[rowIndex] ? addBoard[rowIndex][colIndex] : "a" }} -->
                                 <span v-if="myShipsBoard[rowIndex][colIndex] !== undefined">{{ myShipsBoard[rowIndex][colIndex] + 1 }}</span>
                             </td>
@@ -150,7 +163,9 @@
                 <table class="game-board">
                     <tbody>
                         <tr v-for="(row, rowIndex) in myShipsBoard">
-                            <td v-for="(col, colIndex) in row" v-on:click="makeMove(colIndex, rowIndex)"></td>
+                            <td v-for="(col, colIndex) in row"  v-bind:class="{ 'hit': myMovesBoard[rowIndex][colIndex] !== undefined && myMovesBoard[rowIndex][colIndex].result == 'Hit', 'miss': myMovesBoard[rowIndex][colIndex] !== undefined && myMovesBoard[rowIndex][colIndex].result == 'Miss', 'unknown': myMovesBoard[rowIndex][colIndex] !== undefined && myMovesBoard[rowIndex][colIndex].result == 'Unknown' }" v-on:click="makeMove(colIndex, rowIndex)">
+                                <span v-if="myMovesBoard[rowIndex][colIndex] !== undefined && myMovesBoard[rowIndex][colIndex].result == 'Hit'">{{ myMovesBoard[rowIndex][colIndex].shipNumber + 1 }}</span>
+                            </td>
                         </tr>
                     </tbody>
                 </table>

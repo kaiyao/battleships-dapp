@@ -348,6 +348,7 @@ window.addEventListener('load', () => {
         }
 
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+
         battleshipInstance.allEvents({ address: null }, (error, log) => {
           console.log("game event triggered", error, log);
         });
@@ -391,48 +392,12 @@ window.addEventListener('load', () => {
           }
         });
 
-        // Get opponent
-        battleshipInstance.getOpponentAddress.call().then(val => {
-          console.log("game-opponent", this.gameAddress, val);
-          this.opponent = val;
-
-          // Get opponent moves count
-          return battleshipInstance.getPlayerMovesCount.call(this.opponent);
-        }).then(val => {
-          let movesCount = val;
-
-          // Get opponent moves
-          return battleshipInstance.getPlayerMovesPacked.call(this.opponent).then(val => {
-            console.log("game-opponentmoves", val);
-            this.opponentMoves = [];
-            for(let i = 0; i < movesCount; i++) {
-              this.opponentMoves.push({
-                x: val[i * 3].toNumber(),
-                y: val[i * 3 + 1].toNumber(),
-                result: val[i * 3 + 2].toNumber()
-              });
-            }
-            console.log("game-opponentmoves2", this.opponentMoves);
-          });
-        });
-        
-        // Get my moves count
-        battleshipInstance.getPlayerMovesCount.call(this.account).then(val => {
-          let movesCount = val;
-
-          // Get my moves
-          return battleshipInstance.getPlayerMovesPacked.call(this.account).then(val => {
-            console.log("game-mymoves", val);
-            this.myMoves = [];
-            for(let i = 0; i < movesCount; i++) {
-              this.myMoves.push({
-                x: val[i].toNumber(),
-                y: val[i * 3 + 1].toNumber(),
-                result: val[i * 3 + 2].toNumber()
-              });
-              console.log("game-mymoves2", this.myMoves);
-            }
-          });
+        this.updateMovesListFromChain();
+        // Get move added event
+        var moveMadeEvent = battleshipInstance.MoveMade({}, {}, (error, result) => {
+          if (!error) {
+            this.updateMovesListFromChain();
+          }
         });
 
         battleshipInstance.gameState.call().then(val => {
@@ -459,6 +424,56 @@ window.addEventListener('load', () => {
         }).then(val => {
           console.log("game-boardShips", this.gameAddress, val, val.toString());
           this.boardShips = val.map(x => x.toNumber());
+        });
+      },
+
+      updateMovesListFromChain: function() {
+        var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+
+        // Get opponent
+        battleshipInstance.getOpponentAddress.call().then(val => {
+          console.log("game-opponent", this.gameAddress, val);
+          this.opponent = val;
+
+          // Get opponent moves count
+          return battleshipInstance.getPlayerMovesCount.call(this.opponent);
+        }).then(val => {
+          let movesCount = val;
+
+          // Get opponent moves
+          return battleshipInstance.getPlayerMovesPacked.call(this.opponent).then(val => {
+            console.log("game-opponentmoves", val);
+            this.opponentMoves = [];
+            for(let i = 0; i < movesCount; i++) {
+              this.opponentMoves.push({
+                x: val[i * 4].toNumber(),
+                y: val[i * 4 + 1].toNumber(),
+                result: this.convertNumberToMoveResult(val[i * 4 + 2].toNumber()),
+                shipNumber: val[i * 4 + 3].toNumber()
+              });
+            }
+            console.log("game-opponentmoves2", this.opponentMoves);
+          });
+        });
+        
+        // Get my moves count
+        battleshipInstance.getPlayerMovesCount.call(this.account).then(val => {
+          let movesCount = val;
+
+          // Get my moves
+          return battleshipInstance.getPlayerMovesPacked.call(this.account).then(val => {
+            console.log("game-mymoves", val);
+            this.myMoves = [];
+            for(let i = 0; i < movesCount; i++) {
+              this.myMoves.push({
+                x: val[i * 4].toNumber(),
+                y: val[i * 4 + 1].toNumber(),
+                result: this.convertNumberToMoveResult(val[i * 4 + 2].toNumber()),
+                shipNumber: val[i * 4 + 3].toNumber()
+              });
+              console.log("game-mymoves2", this.myMoves);
+            }
+          });
         });
       },
 
@@ -679,6 +694,32 @@ window.addEventListener('load', () => {
             }
           }
 
+        }
+
+        return board;
+      },
+      opponentMovesBoard: function () {
+        let board = [];
+        for (let i = 0; i < this.boardHeight; i++) {
+          board[i] = new Array(this.boardWidth);
+        }
+
+        for (let i = 0; i < this.opponentMoves.length; i++) {
+          let move = this.opponentMoves[i];
+          board[move.y][move.x] = move;
+        }
+
+        return board;
+      },
+      myMovesBoard: function () {
+        let board = [];
+        for (let i = 0; i < this.boardHeight; i++) {
+          board[i] = new Array(this.boardWidth);
+        }
+
+        for (let i = 0; i < this.myMoves.length; i++) {
+          let move = this.myMoves[i];
+          board[move.y][move.x] = move;
         }
 
         return board;

@@ -27,6 +27,11 @@ contract Battleship {
         uint x;
         uint y;
         MoveResult result;
+        uint shipNumber;
+        // We need to store the ship number (if Hit) for the move, because the game rules say:
+        // You call: "D-4"
+        // Alex answers: "Hit. Cruiser."
+        // so for each move, we need x, y (D-4), result (Hit), and shipNumber (Cruiser)     
     }
 
     struct PlayerInfo {
@@ -189,19 +194,20 @@ contract Battleship {
             "Must have submited move result"
         );
         
-        players[msg.sender].moves[players[msg.sender].movesCount] = Move(x, y, MoveResult.Unknown);
+        players[msg.sender].moves[players[msg.sender].movesCount] = Move(x, y, MoveResult.Unknown, 0);
         players[msg.sender].movesCount++;
 
         emit MoveMade(msg.sender, x, y);
     }
 
-    function getPlayerMovesPacked(address player) public view returns (uint[boardWidth * boardHeight * 3]) {
-        uint[boardWidth * boardHeight * 3] memory moves;
+    function getPlayerMovesPacked(address player) public view returns (uint[boardWidth * boardHeight * 4]) {
+        uint[boardWidth * boardHeight * 4] memory moves;
         for (uint i = 0; i < getPlayerMovesCount(player); i++) {
             Move storage move = players[player].moves[i];
-            moves[i * 3 + 0] = move.x;
-            moves[i * 3 + 1] = move.y;
-            moves[i * 3 + 2] = convertMoveResultToUInt(move.result);
+            moves[i * 4 + 0] = move.x;
+            moves[i * 4 + 1] = move.y;
+            moves[i * 4 + 2] = convertMoveResultToUInt(move.result);
+            moves[i * 4 + 3] = move.shipNumber;
         }
         return moves;
     }
@@ -210,12 +216,13 @@ contract Battleship {
         return players[player].movesCount;
     }
 
-    function getPlayerMove(address player, uint index) public view returns (uint[3]) {
+    function getPlayerMove(address player, uint index) public view returns (uint[4]) {
         Move storage move = players[player].moves[index];
-        uint[3] memory retValue;
+        uint[4] memory retValue;
         retValue[0] = move.x;
         retValue[1] = move.y;
         retValue[2] = convertMoveResultToUInt(move.result);
+        retValue[3] = move.shipNumber;
         return retValue;
     }
 
@@ -228,20 +235,16 @@ contract Battleship {
     function updateLastOpponentMoveWithResult(MoveResult result, uint shipNumber) public {
         require(gameState == GameState.Started, "Game must be started");
         require(msg.sender == player1 || msg.sender == player2, "Sender must be player");
-        //require(result == MoveResult.Miss || (shipNumber >= 0 && shipNumber < shipsPerPlayer), "Result must be miss or shipnumber");
+        require(result == MoveResult.Hit || result == MoveResult.Miss, "Result must be Hit or Miss, not unknown");
+        require(result == MoveResult.Miss || (shipNumber >= 0 && shipNumber < shipsPerPlayer), "Result must be miss or shipnumber");
         
-        // You cannot update with "unknown" result
-        require(result == MoveResult.Hit || result == MoveResult.Miss);
-        address opponent = player1;
-        if (msg.sender == player1) {
-            opponent = player2;
-        }
+        address opponent = getOpponentAddress();
         uint opponentMoveCount = players[opponent].movesCount;
         //require(players[opponent].moves[opponentMoveCount - 1].result == MoveResult.Unknown);
 
         players[opponent].moves[opponentMoveCount - 1].result = result;
         if (result == MoveResult.Hit) {
-            //players[opponent].moves[opponentMoveCount - 1].shipNumber = shipNumber;
+            players[opponent].moves[opponentMoveCount - 1].shipNumber = shipNumber;
             players[opponent].hitCount++;
         }
 
