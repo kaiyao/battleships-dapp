@@ -195,7 +195,7 @@ contract Battleship {
     }
 
     function getWhoseTurn() public view returns (address) {
-        if (players[player1].movesCount >= players[player2].movesCount) {
+        if (players[player1].movesCount == players[player2].movesCount) {
             return player1;
         } else {
             return player2;
@@ -207,8 +207,11 @@ contract Battleship {
         require(msg.sender == player1 || msg.sender == player2, "Sender must be player");
         
         // Check that it is the player's turn
+        // When game starts, both players have 0 moves: player 1 starts first
+        // Then player 2 has less moves than player 1, so it is player 2's turn
+        // Then both players have the same number of moves again, so it is player 1's turn
         require(
-            (msg.sender == player1 && players[player1].movesCount >= players[player2].movesCount) || 
+            (msg.sender == player1 && players[player1].movesCount == players[player2].movesCount) || 
             (msg.sender == player2 && players[player2].movesCount < players[player1].movesCount),
             "Must be player's turn"
         );
