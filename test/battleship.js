@@ -11,6 +11,18 @@ const GAMESTATE_ENDED = 5;
 const emptyAddress = '0x0000000000000000000000000000000000000000';
 const testNonce = '0x1234000000000000000000000000000000000000';
 
+const assumptionsReminder = '(assumes boardShips = [5,4,3,3,2] and boardWidth = boardHeight = 10)';
+
+function convertNumberToMoveResult(moveResultNumber) {
+    let moveResultEnum = ['Unknown', 'Miss', 'Hit'];
+    return moveResultEnum[moveResultNumber];
+}
+
+function convertMoveResultToNumber(moveResult) {
+    let moveResultEnum = {'Unknown': 0, 'Miss': 1, 'Hit': 2};
+    return moveResultEnum[moveResult];
+};
+
 contract('Game startup', async (accounts) => {
     const owner = accounts[0];
     const alice = accounts[1];
@@ -225,7 +237,7 @@ contract('Game check ships have been placed', async (accounts) => {
 
 });
 
-contract('Game make shots (assumes boardShips = [5,4,3,3,2] and boardWidth = boardHeight = 10)', async (accounts) => {
+contract('Game make shots ' + assumptionsReminder, async (accounts) => {
     const owner = accounts[0];
     const alice = accounts[1];
     const bob = accounts[2];
@@ -259,6 +271,9 @@ contract('Game make shots (assumes boardShips = [5,4,3,3,2] and boardWidth = boa
         contract = instance;
     });
 
+    // We don't check that you cannot make move at the same position as previously
+    // This is because this is allowed by the code! But as a player, why would you want to do that?
+
     it("should not be able to make shots if not a player", async () => {
         let instance = contract;
         await catchRevert(instance.makeMove(0, 0, {from: carol}));
@@ -284,30 +299,49 @@ contract('Game make shots (assumes boardShips = [5,4,3,3,2] and boardWidth = boa
     it("player 1 should not be able to make two shots consecutively (subsequent shot case)", async () => {
         let instance = contract;
         await instance.makeMove(0, 0, {from: alice});
-        await instance.makeMoveAndUpdateLastMoveWithResult(0, 0, 1, 1, {from: bob});
-        await instance.makeMoveAndUpdateLastMoveWithResult(0, 1, 1, 1, {from: alice});
-        await catchRevert(instance.makeMoveAndUpdateLastMoveWithResult(0, 2, 1, 1, {from: alice}));
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 0, convertMoveResultToNumber('Miss'), 1, {from: bob});
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 1, convertMoveResultToNumber('Miss'), 1, {from: alice});
+        await catchRevert(instance.makeMoveAndUpdateLastMoveWithResult(0, 2, convertMoveResultToNumber('Miss'), 1, {from: alice}));
     });
 
     it("player 2 should not be able to make two shots consecutively (first shot case)", async () => {
         let instance = contract;
         await instance.makeMove(0, 0, {from: alice});
-        await instance.makeMoveAndUpdateLastMoveWithResult(0, 0, 1, 1, {from: bob})
-        await catchRevert(instance.makeMoveAndUpdateLastMoveWithResult(0, 1, 1, 1, {from: bob}));
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 0, convertMoveResultToNumber('Miss'), 1, {from: bob})
+        await catchRevert(instance.makeMoveAndUpdateLastMoveWithResult(0, 1, convertMoveResultToNumber('Miss'), 1, {from: bob}));
     });
 
     it("player 2 should not be able to make two shots consecutively (subsequent shot case)", async () => {
         let instance = contract;
         await instance.makeMove(0, 0, {from: alice});
-        await instance.makeMoveAndUpdateLastMoveWithResult(0, 0, 1, 1, {from: bob});
-        await instance.makeMoveAndUpdateLastMoveWithResult(0, 1, 1, 1, {from: alice});
-        await instance.makeMoveAndUpdateLastMoveWithResult(0, 1, 1, 1, {from: bob});
-        await catchRevert(instance.makeMoveAndUpdateLastMoveWithResult(0, 2, 1, 1, {from: bob}));
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 0, convertMoveResultToNumber('Miss'), 1, {from: bob});
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 1, convertMoveResultToNumber('Miss'), 1, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 1, convertMoveResultToNumber('Miss'), 1, {from: bob});
+        await catchRevert(instance.makeMoveAndUpdateLastMoveWithResult(0, 2, convertMoveResultToNumber('Miss'), 1, {from: bob}));
     });
 
     it("should not be able to make move without updating result of opponent's previous shot", async () => {
         let instance = contract;
         await instance.makeMove(0, 0, {from: alice});
         await catchRevert(instance.makeMove(0, 0, {from: bob}));
+    });
+
+    it("should not be able to make move if ship shot down but not revealed", async () => {
+        let instance = contract;
+
+        // First ship is 5 squares long, we simulate hitting that
+        await instance.makeMove(0, 0, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 0, convertMoveResultToNumber('Hit'), 0, {from: bob});
+        for (let i = 1; i <= 3; i++) {
+            //console.log(i, 'alice');
+            await instance.makeMoveAndUpdateLastMoveWithResult(i, 0, convertMoveResultToNumber('Hit'), 0, {from: alice});
+            //console.log(i, 'bob');
+            await instance.makeMoveAndUpdateLastMoveWithResult(i, 0, convertMoveResultToNumber('Hit'), 0, {from: bob});
+        }
+        await instance.makeMoveAndUpdateLastMoveWithResult(4, 0, convertMoveResultToNumber('Hit'), 0, {from: alice});
+        await catchRevert(instance.makeMoveAndUpdateLastMoveWithResult(4, 0, convertMoveResultToNumber('Hit'), 0, {from: bob}));
+
+        await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(4, 0, convertMoveResultToNumber('Hit'), 0, 5, 1, 0, 0, testNonce, {from: bob});
+
     });
 });

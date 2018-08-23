@@ -43,6 +43,7 @@ contract Battleship {
         Move[boardWidth * boardHeight] moves;
         uint movesCount;
         uint hitCount;
+        uint[shipsPerPlayer] perShipHitCount;
     }
     
     /*
@@ -207,6 +208,10 @@ contract Battleship {
         }
     }
 
+    // Check whose turn it is 
+    // When game starts, both players have 0 moves: player 1 starts first
+    // Then player 2 has less moves than player 1, so it is player 2's turn
+    // Then both players have the same number of moves again, so it is player 1's turn
     function getWhoseTurn() public view returns (address) {
         if (players[player1].movesCount == players[player2].movesCount) {
             return player1;
@@ -220,26 +225,38 @@ contract Battleship {
         require(msg.sender == player1 || msg.sender == player2, "Sender must be player");
         
         // Check that it is the player's turn
-        // When game starts, both players have 0 moves: player 1 starts first
-        // Then player 2 has less moves than player 1, so it is player 2's turn
-        // Then both players have the same number of moves again, so it is player 1's turn
-        require(
-            (msg.sender == player1 && players[player1].movesCount == players[player2].movesCount) || 
-            (msg.sender == player2 && players[player2].movesCount < players[player1].movesCount),
-            "Must be player's turn"
-        );
+        require(msg.sender == getWhoseTurn(), "Must be player's turn");
         // Check that player has already submitted move result for previous opponent move
         require(
             (msg.sender == player1 && players[player1].movesCount == 0) ||
             (msg.sender == player1 && players[player2].moves[players[player2].movesCount - 1].result != MoveResult.Unknown) || 
             (msg.sender == player2 && players[player1].moves[players[player1].movesCount - 1].result != MoveResult.Unknown),
-            "Must have submited move result"
+            "Must have submitted move result"
         );
+        // Check that player has already revealed ship if a ship has been hit
+        require(checkAllSunkShipsRevealed(), "player must reveal ship if hit");
         
         players[msg.sender].moves[players[msg.sender].movesCount] = Move(x, y, MoveResult.Unknown, 0);
         players[msg.sender].movesCount++;
 
         emit MoveMade(msg.sender, x, y);
+    }
+
+    // Checks that all the ships that the opponent has hit and sunk the player with, the player has revealed them
+    function checkAllSunkShipsRevealed() public view returns (bool) {
+        address player = msg.sender;
+        address opponent = getOpponentAddress();
+        for (uint shipNumber = 0; shipNumber < shipsPerPlayer; shipNumber++) {
+            if (players[opponent].perShipHitCount[shipNumber] >= boardShips[shipNumber]) {
+                // Ship has been sunk
+                if (players[player].revealShips[shipNumber].width != 0 && players[player].revealShips[shipNumber].height != 0) {
+                    // okay, ship has been revealed
+                } else {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     function getPlayerMovesPacked(address player) public view returns (uint[boardWidth * boardHeight], uint[boardWidth * boardHeight], MoveResult[boardWidth * boardHeight], uint[boardWidth * boardHeight]) {
@@ -291,6 +308,7 @@ contract Battleship {
         if (result == MoveResult.Hit) {
             players[opponent].moves[opponentMoveCount - 1].shipNumber = shipNumber;
             players[opponent].hitCount++;
+            players[opponent].perShipHitCount[shipNumber]++;
         }
 
         emit MoveUpdated(msg.sender, result, shipNumber);
