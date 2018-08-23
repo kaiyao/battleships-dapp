@@ -305,7 +305,8 @@ window.addEventListener('load', () => {
       myShips: [],     
       myMoves: [],
       opponent: "",
-      opponentMoves: []
+      opponentMoves: [],
+      whoseTurn: "",
     },
     created: function () {
 
@@ -363,22 +364,7 @@ window.addEventListener('load', () => {
           }
         });
 
-        // Get player info (not really used)
-        battleshipInstance.player1.call().then(val => {
-          console.log("game-player1", this.gameAddress, val, val);
-
-          return battleshipInstance.players.call(val);
-        }).then(val => {
-          console.log(val);
-        });
-
         // Recall ships from localstorage
-        /*let localStorageKey = this.gameAddress + '*' + this.account;
-        if (localStorage.getItem(localStorageKey) !== null) {
-          let data = JSON.parse(localStorage.getItem(localStorageKey));
-          this.myShips = data;
-        }*/
-
         this.myShips = [];
         this.getHiddenShips().then(hiddenShips => {
           console.log("getHiddenShips");
@@ -474,6 +460,12 @@ window.addEventListener('load', () => {
               console.log("game-mymoves2", this.myMoves);
             }
           });
+        });
+
+        // Get whose turn
+        battleshipInstance.getWhoseTurn.call().then(val => {
+          console.log("Whose turn", val);
+          this.whoseTurn = val;
         });
       },
 

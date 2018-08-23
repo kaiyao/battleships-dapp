@@ -147,6 +147,7 @@
         <div class="row" v-show="getGameStateString == 'Started'">
             <div class="col-xs-6">
                 <h1>Your ships</h1>
+                <p>Your opponent's shots will appear here</p>
                 <table class="game-board">
                     <tbody>
                         <tr v-for="(row, rowIndex) in myShipsBoard">
@@ -160,6 +161,7 @@
             </div>
             <div class="col-xs-6">
                 <h1>Opponent's ships</h1>
+                <p>Click on a grid below to call a shot</p>
                 <table class="game-board">
                     <tbody>
                         <tr v-for="(row, rowIndex) in myShipsBoard">

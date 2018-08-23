@@ -53,11 +53,25 @@ contract Battleship {
         (or someone declares they have lost)??
         PayoutReady: Winner has been determined, players can claim their payment
     */
+    //enum GameState { Created, PlayersJoined, Started, Ended, ShipsRevealed, WinnerDeclared } ????
     enum GameState { Created, PlayersJoined, Started, Finished, Paid }
     GameState public gameState;
 
+    // game must start within time limit of creation otherwise refund
     uint createdAt;
+    // game must finish within time limit of starting otherwise refund
+    // game finish => sunk squares of 1 player == number of squares of ships
     uint startedAt;
+    // players must reveal ships within time limit of finishing
+    uint finishedAt;
+    // if both players reveal, app checks validity of ships
+    // - ships must not overlap
+    // - hits/misses accurately reported
+    // - declares winner to be the player that first sunk all the ships
+    // if only one player reveals within time limit
+    // - declare this player the winner
+    // if both players don't reveal within time limit
+    // - declare draw, refund
     
     address public player1;
     address public player2;
@@ -88,6 +102,7 @@ contract Battleship {
     constructor() public {
         owner = msg.sender;     
         gameState = GameState.Created;
+        createdAt = block.timestamp;
     }
 
     function getBoardShips() public view returns (uint[shipsPerPlayer]) {
@@ -134,6 +149,7 @@ contract Battleship {
         players[msg.sender].hiddenShips[shipNumber] = ShipHidden(commitHash, commitNonceHash);
         if (checkAllHiddenShipsSubmitted()) {
             gameState = GameState.Started;
+            startedAt = block.timestamp;
             emit StateChanged(msg.sender, gameState);
         }        
     }
@@ -173,6 +189,14 @@ contract Battleship {
             return true;
         } else {
             return false;
+        }
+    }
+
+    function getWhoseTurn() public view returns (address) {
+        if (players[player1].movesCount >= players[player2].movesCount) {
+            return player1;
+        } else {
+            return player2;
         }
     }
     
@@ -260,34 +284,90 @@ contract Battleship {
         updateLastOpponentMoveWithResult(result, shipNumber);
         makeMove(x, y);
     }
+
+    function makeMoveAndUpdateLastMoveWithResultAndRevealShip(uint x, uint y, MoveResult result, uint shipNumber, uint shipWidth, uint shipHeight, uint shipX, uint shipY, bytes32 nonce) public {
+        updateLastOpponentMoveWithResult(result, shipNumber);
+        revealShip(shipNumber, shipWidth, shipHeight, shipX, shipY, nonce);
+        makeMove(x, y);
+    }
     
+    function revealShip(uint shipNumber, uint width, uint height, uint x, uint y, bytes32 nonce) public {
+        require(msg.sender == player1 || msg.sender == player2, "Must be player to reveal ship");
+        require(shipNumber >= 0 && shipNumber < shipsPerPlayer, "Ship number must be within range");
+        require(width == 1 || height == 1, "Width or height must be 1, the ship cannot be wider");
+        require(x + width < boardWidth, "X coordinate cannot place ship outside of board");
+        require(y + height < boardHeight, "Y coordinate cannot place ship outside of board");
+        require(
+            (boardShips[shipNumber] == width && height == 1) || (boardShips[shipNumber] == height && width == 1), 
+            "Ship width/height must match for the ship (ref by shipNumber)"
+        );
+        
+        bytes32 calculatedCommitHash = keccak256(abi.encodePacked(width, height, x, y, nonce));
+        require(calculatedCommitHash == players[msg.sender].hiddenShips[shipNumber].commitHash, "Ship reveal hash mismatch");
+
+        players[msg.sender].revealShips[shipNumber] = Ship(width, height, x, y);
+
+        checkShipPlacementSanityForPlayer(msg.sender);
+    }
+        
     function setGameEnd() private {
         require(gameState == GameState.Started);
         require(msg.sender == player1 || msg.sender == player2);
         gameState = GameState.Finished;
+        finishedAt = block.timestamp;
         emit StateChanged(msg.sender, gameState);
     }
-    
-    function revealShip(uint shipNumber, uint width, uint height, uint x, uint y) public {
-        require(gameState == GameState.Finished);
-        require(msg.sender == player1 || msg.sender == player2);
-        require(shipNumber >=0 && shipNumber < shipsPerPlayer);
-        require(width == 1 || height == 1);
-        require(x + width <= boardWidth);
-        require(y + height <= boardWidth);
-        require(
-            (boardShips[shipNumber] == width && height == 1) || 
-            (boardShips[shipNumber] == height && width == 1)
-        );
-        
-        players[msg.sender].revealShips[shipNumber] = Ship(width, height, x, y);
+
+
+    function checkAllShipsRevealed() public view returns (bool) {
+        uint player1Ships = 0;
+        uint player2Ships = 0;
+        for (uint i = 0; i < shipsPerPlayer; i++) {
+            // We only check the width and height, as x, y are allowed to be zero
+            if (players[player1].revealShips[i].width != 0 && players[player1].revealShips[i].height != 0) {
+                player1Ships++;
+            }
+            if (players[player1].revealShips[i].width != 0 && players[player1].revealShips[i].height != 0) {
+                player2Ships++;
+            }
+        }
+        if (player1Ships >= shipsPerPlayer && player2Ships >= shipsPerPlayer) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function checkShipPlacementSanityForPlayer(address player) public view returns (bool) {
+        uint[boardWidth][boardHeight] memory board;
+
+        for (uint shipIndex = 0; shipIndex < shipsPerPlayer; shipIndex++) {
+            // For all the ships that have been revealed so far
+            Ship storage ship = players[player].revealShips[shipIndex];
+            
+            if (ship.width != 0 && ship.height != 0) {
+                
+                uint x = ship.x;
+                uint y = ship.y;
+                uint width = ship.width;
+                uint height = ship.height;
+
+                require(x + width < boardWidth, "X coordinate cannot place ship outside of board");
+                require(y + height < boardHeight, "Y coordinate cannot place ship outside of board");
+
+                for (uint i = x; i < x + width; i++) {
+                    for (uint j = y; j < y + height; j++) {
+                        require (board[i][j] == 0, "Placement sanity check: Ships cannot overlap");
+                        board[i][j] = shipIndex + 1; // we plus 1 here, so that zero = empty ship
+                    }
+                }
+            }
+        }
     }
     
     function checkWinner() public view returns (address) {
         require(gameState == GameState.Finished);
         // Check that both players have submitted their ships and nonce
-        require(players[player1].revealShipsCount == boardShips.length);
-        require(players[player2].revealShipsCount == boardShips.length);
     }
     
 }
