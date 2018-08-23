@@ -381,17 +381,12 @@ contract Battleship {
             Ship storage ship = players[player].revealShips[shipIndex];
             
             if (ship.width != 0 && ship.height != 0) {
-                
-                uint x = ship.x;
-                uint y = ship.y;
-                uint width = ship.width;
-                uint height = ship.height;
 
-                if (x + width >= boardWidth) return false;
-                if (y + height >= boardHeight) return false;
+                if (ship.x + ship.width >= boardWidth) return false;
+                if (ship.y + ship.height >= boardHeight) return false;
 
-                for (uint i = x; i < x + width; i++) {
-                    for (uint j = y; j < y + height; j++) {
+                for (uint i = ship.x; i < ship.x + ship.width; i++) {
+                    for (uint j = ship.y; j < ship.y + ship.height; j++) {
                         board[i][j] = shipIndex + 1; // we plus 1 here, so that zero = empty ship
                     }
                 }
