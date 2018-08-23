@@ -149,8 +149,8 @@
                 <h1>Opponent's ships</h1>
                 <table class="game-board">
                     <tbody>
-                        <tr v-for="row in myShipsBoard">
-                            <td v-for="col in row" v-on:click="makeMove(row, col)"></td>
+                        <tr v-for="(row, rowIndex) in myShipsBoard">
+                            <td v-for="(col, colIndex) in row" v-on:click="makeMove(colIndex, rowIndex)"></td>
                         </tr>
                     </tbody>
                 </table>

@@ -605,7 +605,8 @@ window.addEventListener('load', () => {
             shipNumber = this.myShipsBoard[lastMove.y][lastMove.x];
           }
           let moveResultNumber = this.convertMoveResultToNumber(moveResult);
-          battleshipInstance.makeMoveAndUpdateLastMoveWithResult(x * 1, y * 1, moveResult * 1, shipNumber * 1, { from: this.account }).then(response => {
+          console.log(x, y, x * 1, y * 1, moveResultNumber * 1, shipNumber * 1);
+          battleshipInstance.makeMoveAndUpdateLastMoveWithResult(x * 1, y * 1, moveResultNumber * 1, shipNumber * 1, { from: this.account }).then(response => {
             console.log("move submitted and updated last move");
           });
         } else {        
