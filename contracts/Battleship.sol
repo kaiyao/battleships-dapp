@@ -57,6 +57,8 @@ contract Battleship {
     enum GameState { Created, PlayersJoined, Started, Finished, ShipsRevealed, Ended }
     GameState public gameState;
 
+    enum GameEndState { Draw, Player1WinsValidGame, Player2WinsValidGame, Player1WinsInvalidGame, Player2WinsInvalidGame }
+
     // game must start within time limit of creation otherwise refund
     uint createdAt;
     // game must finish within time limit of starting otherwise refund
@@ -307,7 +309,7 @@ contract Battleship {
 
         players[msg.sender].revealShips[shipNumber] = Ship(width, height, x, y);
 
-        checkShipPlacementSanityForPlayer(msg.sender);
+        require(isShipPlacementSaneForPlayer(msg.sender));
     }
         
     function setGameEnd() private {
@@ -338,7 +340,7 @@ contract Battleship {
         }
     }
 
-    function checkShipPlacementSanityForPlayer(address player) public view returns (bool) {
+    function isShipPlacementSaneForPlayer(address player) public view returns (bool) {
         uint[boardWidth][boardHeight] memory board;
 
         for (uint shipIndex = 0; shipIndex < shipsPerPlayer; shipIndex++) {
@@ -352,17 +354,67 @@ contract Battleship {
                 uint width = ship.width;
                 uint height = ship.height;
 
-                require(x + width < boardWidth, "X coordinate cannot place ship outside of board");
-                require(y + height < boardHeight, "Y coordinate cannot place ship outside of board");
+                if (x + width >= boardWidth) return false;
+                if (y + height >= boardHeight) return false;
 
                 for (uint i = x; i < x + width; i++) {
                     for (uint j = y; j < y + height; j++) {
-                        require (board[i][j] == 0, "Placement sanity check: Ships cannot overlap");
+                        if (board[i][j] != 0) return false;
                         board[i][j] = shipIndex + 1; // we plus 1 here, so that zero = empty ship
                     }
                 }
             }
         }
+
+        return true;
+    }
+
+    /** @dev Checks that the player has reported (for the opponent's moves) the correct outcome of each move
+      * @param player The player to check for
+      */
+    function isMovesReportedCorrectlyForPlayer(address player) public view returns (bool) {
+        uint[boardWidth][boardHeight] memory board;
+
+        // Place all the ships down on a board
+        for (uint shipIndex = 0; shipIndex < shipsPerPlayer; shipIndex++) {
+            // For all the ships that have been revealed so far
+            Ship storage ship = players[player].revealShips[shipIndex];
+            
+            if (ship.width != 0 && ship.height != 0) {
+                
+                uint x = ship.x;
+                uint y = ship.y;
+                uint width = ship.width;
+                uint height = ship.height;
+
+                if (x + width >= boardWidth) return false;
+                if (y + height >= boardHeight) return false;
+
+                for (uint i = x; i < x + width; i++) {
+                    for (uint j = y; j < y + height; j++) {
+                        board[i][j] = shipIndex + 1; // we plus 1 here, so that zero = empty ship
+                    }
+                }
+            }
+        }
+
+        address opponent = getOpponentAddress();
+        Move[boardWidth * boardHeight] storage opponentMoves = players[opponent].moves;
+        uint opponentMoveCount = players[opponent].movesCount;
+
+        for (uint moveNum = 0; moveNum < opponentMoveCount; moveNum++) {
+            Move storage move = opponentMoves[moveNum];
+            if (board[move.x][move.y] == 0 && move.result == MoveResult.Miss) {
+                // ok
+            } else if (board[move.x][move.y] != 0 && move.result == MoveResult.Hit && move.shipNumber == board[move.x][move.y] - 1) {
+                // ok
+            } else {
+                return false;
+            }
+        }
+
+        return true;
+
     }
     
     function gameFinishedAction() public view returns (address) {
@@ -385,10 +437,35 @@ contract Battleship {
         }
     }
 
-    function checkWinnerWhenBothPlayerRevealed() public returns (address) {
-        address winner;
+    function checkWinnerWhenBothPlayersRevealedShips() public returns (GameEndState) {
 
-        if (checkShipPlacementSanityForPlayer == )
+        // Check both players have valid ship placement
+        bool player1ShipsPlacementValid = isShipPlacementSaneForPlayer(player1);
+        bool player2ShipsPlacementValid = isShipPlacementSaneForPlayer(player2);
+        if (player1ShipsPlacementValid && player1ShipsPlacementValid) {
+            // continue checks
+        } else if (player1ShipsPlacementValid && !player2ShipsPlacementValid) {
+            return GameEndState.Player1WinsInvalidGame;
+        } else if (!player1ShipsPlacementValid && player2ShipsPlacementValid) {
+            return GameEndState.Player2WinsInvalidGame;
+        } else {
+            return GameEndState.Draw;
+        }
+
+        // Check both players have reported their ships correctly
+        bool player1MovesReportedCorrectly = isMovesReportedCorrectlyForPlayer(player1);
+        bool player2MovesReportedCorrectly = isMovesReportedCorrectlyForPlayer(player2);
+        if (player1MovesReportedCorrectly && player2MovesReportedCorrectly) {
+            // continue checks
+        } else if (player1MovesReportedCorrectly && !player2MovesReportedCorrectly) {
+            return GameEndState.Player1WinsInvalidGame;
+        } else if (!player1ShipsPlacementValid && player2MovesReportedCorrectly) {
+            return GameEndState.Player2WinsInvalidGame;
+        } else {
+            return GameEndState.Draw;
+        }
+
+        // Check which player sunk all ships first
 
 
     }
