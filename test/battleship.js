@@ -1,4 +1,5 @@
 const Battleship = artifacts.require("Battleship");
+const BattleshipTest = artifacts.require("BattleshipTest");
 const catchRevert = require("./exceptions.js").catchRevert;
 
 const GAMESTATE_CREATED = 0;
@@ -373,6 +374,17 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         perShipHitCount: [],
     };
 
+    let cacheBob = {
+        revealShips: [],
+        revealShipsCount: 0,
+        hiddenShips: [],
+        hiddenShipsCount: 0,
+        moves: [],
+        movesCount: 0,
+        hitCount: 0,
+        perShipHitCount: [],
+    };
+
     let cacheAliceMoves = [];
     let cacheAliceMovesCount = 0;
     let cacheAliceRevealedShips = [];
@@ -382,7 +394,7 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
 
     before(async () => {
 
-        let instance = await Battleship.new();
+        let instance = await BattleshipTest.new();
         await instance.setTestMode(); // enable testMode
         boardShips = await instance.getBoardShips();
         var maxShipLength = boardShips.reduce(function(a, b) {
@@ -455,7 +467,7 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
     });
 
     beforeEach(async () => {
-        let instance = await Battleship.new();
+        let instance = await BattleshipTest.new();
         await instance.setTestMode(); // enable testMode
         boardShips = await instance.getBoardShips();
         var maxShipLength = boardShips.reduce(function(a, b) {

@@ -111,15 +111,6 @@ contract Battleship is Ownable, Pausable, PullPayment {
         createdAt = getTimestamp();
     }
 
-    function setTestMode() public onlyOwner {
-        testMode = true;
-    }
-
-    function setTimestamp(uint _timestamp) public {
-        require(testMode, "Test mode only");
-        testModeTimestamp = _timestamp;
-    }
-
     function getTimestamp() public view returns (uint) {
         if (testMode) {
             return testModeTimestamp;
@@ -262,51 +253,6 @@ contract Battleship is Ownable, Pausable, PullPayment {
         emit MoveMade(msg.sender, x, y);
     }
 
-    function getRevealShipsPackedForPlayer(address player) public view returns (uint[shipsPerPlayer], uint[shipsPerPlayer], uint[shipsPerPlayer], uint[shipsPerPlayer]) {
-        uint[shipsPerPlayer] memory width;
-        uint[shipsPerPlayer] memory height;
-        uint[shipsPerPlayer] memory x;
-        uint[shipsPerPlayer] memory y;
-        for (uint i = 0; i < shipsPerPlayer; i++) {
-            Ship memory ship = players[player].revealShips[i];
-            width[i] = ship.width;
-            height[i] = ship.height;
-            x[i] = ship.x;
-            y[i] = ship.y;
-        }
-        return (width, height, x, y);
-    }
-
-    function getRevealShipsCountForPlayer(address player) public view returns (uint) {
-        return players[player].revealShipsCount;
-    }
-
-    function setRevealShipsPackedForPlayer(address player, uint revealShipsCount, uint[shipsPerPlayer] width, uint[shipsPerPlayer] height, uint[shipsPerPlayer] x, uint[shipsPerPlayer] y) public onlyOwner {
-        require(testMode, "Test Mode only");
-        players[player].revealShipsCount = revealShipsCount;
-        for (uint i = 0; i < shipsPerPlayer; i++) {
-            players[player].revealShips[i] = Ship(width[i], height[i], x[i], y[i]);
-        }
-    }
-
-    function getHitCountForPlayer(address player) public view returns (uint) {
-        return players[player].hitCount;
-    }
-
-    function setHitCountForPlayer(address player, uint hitCount) public {
-        require(testMode, "Test Mode only");
-        players[player].hitCount = hitCount;
-    }
-
-    function getPerShipHitCountForPlayer(address player) public view returns (uint[shipsPerPlayer]) {
-        return players[player].perShipHitCount;
-    }
-
-    function setPerShipHitCountForPlayer(address player, uint[shipsPerPlayer] perShipHitCount) public {
-        require(testMode, "Test Mode only");
-        players[player].perShipHitCount = perShipHitCount;
-    }
-
     // Checks that all the ships that the opponent has hit and sunk the player with, the player has revealed them
     function checkAllSunkShipsRevealed() public view returns (bool) {
         address player = msg.sender;
@@ -355,12 +301,6 @@ contract Battleship is Ownable, Pausable, PullPayment {
     function getPlayerMove(address player, uint index) public view returns (uint, uint, MoveResult, uint) {
         Move storage move = players[player].moves[index];
         return (move.x, move.y, move.result, move.shipNumber);
-    }
-
-    function convertMoveResultToUInt(MoveResult result) public pure returns (uint) {
-        if (result == MoveResult.Unknown) return 0;
-        if (result == MoveResult.Miss) return 1;
-        if (result == MoveResult.Hit) return 2;
     }
     
     function updateLastOpponentMoveWithResult(MoveResult result, uint shipNumber) public {
