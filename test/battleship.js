@@ -555,7 +555,23 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         assert.equal(endState.toNumber(), GameEndState_Player2WinsValidGame, "bob wins because she sunk all the ships first");
     });
 
-    it("should detect wrongly reported moves", async () => {
+    it("should detect wrongly reported moves (player 1)", async () => {
+        let instance = contract;
+
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Miss'), 4, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
+        await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Miss'), 4, {from: alice}); // incorrect report
+        await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(1, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: bob});
+       
+        // Since alice has won, alice also needs to reveal all her ships
+        // If not all ships revealed the checks below will fail!!
+        await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: alice});
+
+        let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
+        assert.equal(endState.toNumber(), GameEndState_Player2WinsInvalidGame, "bob wins - alice has misreported");
+    });
+
+    it("should detect wrongly reported moves (player 2)", async () => {
         let instance = contract;
 
         // last row with ship length = 2
@@ -571,6 +587,24 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
 
         let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
         assert.equal(endState.toNumber(), GameEndState_Player1WinsInvalidGame, "alice wins because, even though bob sunk all the ships first, bob has misreported");
+    });
+
+    it("should detect wrongly reported moves (both)", async () => {
+        let instance = contract;
+
+        // last row with ship length = 2
+        await instance.makeMoveAndUpdateLastMoveWithResult(5, 4, convertMoveResultToNumber('Hit'), 0, {from: alice}); // incorrect report
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 0, {from: bob}); // incorrect report
+        await instance.makeMoveAndUpdateLastMoveWithResult(6, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Miss'), 0, {from: bob});
+        await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(7, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: alice});
+       
+        // Since bob has won, bob also needs to reveal all his ships
+        // If not all ships revealed the checks below will fail!!
+        await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: bob});
+
+        let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
+        assert.equal(endState.toNumber(), GameEndState_Draw, "draw because both players mis-reported");
     });
 });
 
