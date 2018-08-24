@@ -30,7 +30,7 @@ function convertMoveResultToNumber(moveResult) {
     return moveResultEnum[moveResult];
 };
 
-/*
+
 contract('Game startup', async (accounts) => {
     const owner = accounts[0];
     const alice = accounts[1];
@@ -353,7 +353,7 @@ contract('Game make shots ' + assumptionsReminder, async (accounts) => {
 
     });
 });
-*/
+
 
 contract('Game finishing ' + assumptionsReminder, async (accounts) => {
     const owner = accounts[0];
@@ -571,5 +571,103 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
 
         let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
         assert.equal(endState.toNumber(), GameEndState_Player1WinsInvalidGame, "alice wins because, even though bob sunk all the ships first, bob has misreported");
+    });
+});
+
+contract('Game detects invalid ship placements ' + assumptionsReminder, async (accounts) => {
+    const owner = accounts[0];
+    const alice = accounts[1];
+    const bob = accounts[2];
+    const carol = accounts[3];
+
+    let boardShips;
+
+    it("should not allow overlapping ships", async () => {
+
+        let instance = await Battleship.new();
+        boardShips = await instance.getBoardShips();
+        var maxShipLength = boardShips.reduce(function(a, b) {
+            return Math.max(a, b);
+        });
+
+        await instance.joinPlayer(alice);
+        await instance.joinPlayer(bob);
+
+        // Sets up ships like the following
+        // 5 5 5 5 5
+        // 4 4 4 4
+        // 3 3 3
+        // 3/2 3/2 3
+
+        for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
+            let shipWidth = boardShips[shipNumber];
+            // just put the ships next to each other (except last ship, we make it overlap the previous ship)
+            let shipY = shipNumber;
+            if (shipNumber == boardShips.length - 1) {
+                shipY = shipNumber - 1;
+            }
+            let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipY, testNonce);
+            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
+            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
+            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+        }
+
+        for (let shipNumber = 0; shipNumber < boardShips.length - 1; shipNumber++) {
+            let shipWidth = boardShips[shipNumber];
+            let shipY = shipNumber;
+            if (shipNumber == boardShips.length - 1) {
+                shipY = shipNumber - 1;
+            }
+            await instance.revealShip(shipNumber, shipWidth, 1, 0, shipY, testNonce, {from: alice});
+            await instance.revealShip(shipNumber, shipWidth, 1, 0, shipY, testNonce, {from: bob});
+        }
+
+        let shipNumber = boardShips.length - 1;
+        let shipWidth = boardShips[shipNumber];
+        let shipY = shipNumber - 1;
+        await catchRevert(instance.revealShip(shipNumber, shipWidth, 1, 0, shipY, testNonce, {from: alice}));
+        await catchRevert(instance.revealShip(shipNumber, shipWidth, 1, 0, shipY, testNonce, {from: bob}));
+
+    });
+
+    it("should not allow ships to be placed out of board", async () => {
+
+        let instance = await Battleship.new();
+        let boardShips = await instance.getBoardShips();
+        let boardWidth = instance.boardWidth();
+        let boardHeight = instance.boardHeight();
+
+        var maxShipLength = boardShips.reduce(function(a, b) {
+            return Math.max(a, b);
+        });
+
+        await instance.joinPlayer(alice);
+        await instance.joinPlayer(bob);
+
+        for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
+            let shipWidth = boardShips[shipNumber];
+            // just put the ships next to each other (except Bob's last ship)
+            let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
+            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
+            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
+            if (shipNumber < boardShips.length - 1) {
+                await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+            } else {
+                // For the last ship, we place it at the bottom right
+                commitHash = await instance.calculateCommitHash(shipWidth, 1, boardWidth - 1, boardHeight - 1, testNonce);
+                await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+            }
+        }
+
+        for (let shipNumber = 0; shipNumber < boardShips.length - 1; shipNumber++) {
+            let shipWidth = boardShips[shipNumber];
+            await instance.revealShip(shipNumber, shipWidth, 1, 0, shipNumber, testNonce, {from: alice});
+            if (shipNumber < boardShips.length - 1) {
+                await instance.revealShip(shipNumber, shipWidth, 1, 0, shipNumber, testNonce, {from: bob});
+            } else {
+                await catchRevert(instance.revealShip(shipNumber, shipWidth, 1, 0, shipNumber, testNonce, {from: bob}));
+            }
+        }
+
     });
 });

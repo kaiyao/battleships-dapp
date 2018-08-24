@@ -350,7 +350,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
 
         players[msg.sender].revealShips[shipNumber] = Ship(width, height, x, y);
 
-        require(isShipPlacementSaneForPlayer(msg.sender));
+        require(isShipPlacementSaneForPlayer(msg.sender), "Ship placement is not sane");
     }
         
     function setGameEnd() private {
@@ -478,7 +478,8 @@ contract Battleship is Ownable, Pausable, PullPayment {
     function checkWinnerWhenBothPlayersRevealedShips() public view returns (GameEndState) {
 
         // Check both players have valid ship placement
-        bool player1ShipsPlacementValid = isShipPlacementSaneForPlayer(player1);
+        // Skip this because we already check when revealing ship. You cannot reveal a ship successfully if it is invalid
+        /*bool player1ShipsPlacementValid = isShipPlacementSaneForPlayer(player1);
         bool player2ShipsPlacementValid = isShipPlacementSaneForPlayer(player2);
         if (player1ShipsPlacementValid && player1ShipsPlacementValid) {
             // continue checks
@@ -488,7 +489,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
             return GameEndState.Player2WinsInvalidGame;
         } else {
             return GameEndState.Draw;
-        }
+        }*/
 
         // Check both players have reported their ships correctly
         bool player1MovesReportedCorrectly = isMovesReportedCorrectlyForPlayer(player1);
@@ -497,7 +498,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
             // continue checks
         } else if (player1MovesReportedCorrectly && !player2MovesReportedCorrectly) {
             return GameEndState.Player1WinsInvalidGame;
-        } else if (!player1ShipsPlacementValid && player2MovesReportedCorrectly) {
+        } else if (!player1MovesReportedCorrectly && player2MovesReportedCorrectly) {
             return GameEndState.Player2WinsInvalidGame;
         } else {
             return GameEndState.Draw;
