@@ -148,7 +148,11 @@ contract Battleship is Ownable, Pausable, PullPayment {
     function getOpponentAddress() public view returns (address) {
         require(msg.sender == player1 || msg.sender == player2);
         require(player1 != 0 && player2 != 0);
-        if (player1 == msg.sender) {
+        return getOpponentAddressForPlayer(msg.sender);
+    }
+
+    function getOpponentAddressForPlayer(address player) public view returns (address) {
+        if (player1 == player) {
             return player2;
         } else {            
             return player1;
@@ -283,15 +287,6 @@ contract Battleship is Ownable, Pausable, PullPayment {
             movesShipNumber[i] = move.shipNumber;
         }
         return (movesX, movesY, movesResult, movesShipNumber);
-    }
-
-    function setPlayerMovesPacked(address player, uint movesCount, uint[boardWidth * boardHeight] movesX, uint[boardWidth * boardHeight] movesY, MoveResult[boardWidth * boardHeight] movesResult, uint[boardWidth * boardHeight] movesShipNumber) public onlyOwner {
-        require(testMode);
-        
-        players[player].movesCount = movesCount;
-        for (uint i = 0; i < movesCount; i++) {
-            players[player].moves[i] = Move(movesX[i], movesY[i], movesResult[i], movesShipNumber[i]);
-        }
     }
 
     function getPlayerMovesCount(address player) public view returns (uint) {
@@ -439,7 +434,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
             }
         }
 
-        address opponent = getOpponentAddress();
+        address opponent = getOpponentAddressForPlayer(player);
         Move[boardWidth * boardHeight] storage opponentMoves = players[opponent].moves;
         uint opponentMoveCount = players[opponent].movesCount;
 
@@ -447,7 +442,9 @@ contract Battleship is Ownable, Pausable, PullPayment {
             Move storage move = opponentMoves[moveNum];
             if (board[move.x][move.y] == 0 && move.result == MoveResult.Miss) {
                 // ok
-            } else if (board[move.x][move.y] != 0 && move.result == MoveResult.Hit && move.shipNumber == board[move.x][move.y] - 1) {
+            } else if (board[move.x][move.y] != 0 && move.result == MoveResult.Hit && move.shipNumber + 1 == board[move.x][move.y]) {
+                // ok
+            } else if (move.result == MoveResult.Unknown) {
                 // ok
             } else {
                 return false;

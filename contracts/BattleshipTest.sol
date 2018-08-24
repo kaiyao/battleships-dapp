@@ -10,6 +10,10 @@ contract BattleshipTest is Battleship {
         testMode = true;
     }
 
+    function setTestMode() public onlyOwner {
+        testMode = true;
+    }
+
     function setTimestamp(uint _timestamp) public {
         require(testMode, "Test mode only");
         testModeTimestamp = _timestamp;
@@ -58,5 +62,16 @@ contract BattleshipTest is Battleship {
     function setPerShipHitCountForPlayer(address player, uint[shipsPerPlayer] perShipHitCount) public {
         require(testMode, "Test Mode only");
         players[player].perShipHitCount = perShipHitCount;
+    }
+
+    // get player moves packed is used in main game
+
+    function setPlayerMovesPacked(address player, uint movesCount, uint[boardWidth * boardHeight] movesX, uint[boardWidth * boardHeight] movesY, MoveResult[boardWidth * boardHeight] movesResult, uint[boardWidth * boardHeight] movesShipNumber) public onlyOwner {
+        require(testMode);
+        
+        players[player].movesCount = movesCount;
+        for (uint i = 0; i < movesCount; i++) {
+            players[player].moves[i] = Move(movesX[i], movesY[i], movesResult[i], movesShipNumber[i]);
+        }
     }
 }

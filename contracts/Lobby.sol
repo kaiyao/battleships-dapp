@@ -2,9 +2,8 @@ pragma solidity ^0.4.24;
 
 import "./Battleship.sol";
 
-contract Lobby {
+contract Lobby is Ownable {
 
-    address owner;
     mapping (address => address[]) public games;
     address[] public openGames;
 
@@ -25,7 +24,7 @@ contract Lobby {
     );
 
     constructor() public {
-        owner = msg.sender;
+
     }
 
     function getGamesBelongingToPlayer() public view returns (address[]) {

@@ -424,14 +424,17 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         for (let y = 0; y < boardShips.length - 1; y++) {
             // maxShipLength + 1 to make it easier to calculate stuff (don't have to handle wrapping)
             for (let x = 0; x < maxShipLength + 1; x++) {
-                console.log("alice", x, y);
                 if (y == 0 && x == 0) { // first move
+                    console.log("alice", x, y);
                     await instance.makeMove(x, y, {from: alice});
                 } else if (x > 0 && x < boardShips[y]) { // if ship is length 5, x = 1 .. 5 is when opponent put x = 0 .. 4 which is hit
+                    console.log("alice", x, y, 'Hit', y);
                     await instance.makeMoveAndUpdateLastMoveWithResult(x, y, convertMoveResultToNumber('Hit'), y, {from: alice}); 
                 } else if (x == boardShips[y]) { // if ship is length 5, at x = 5, opponent just put x = 4 and sunk the ship in previous move
+                    console.log("alice", x, y, 'Hit', y, boardShips[y], 1, 0, y);
                     await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(x, y, convertMoveResultToNumber('Hit'), y, boardShips[y], 1, 0, y, testNonce, {from: alice});
                 } else {
+                    console.log("alice", x, y, 'Miss', 0);
                     await instance.makeMoveAndUpdateLastMoveWithResult(x, y, convertMoveResultToNumber('Miss'), 0, {from: alice}); 
                 }
 
@@ -464,10 +467,14 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         cacheBob.hiddenShipsCount = (await instance.getBoardShips()).length;
         cacheBob.hitCount = await instance.getHitCountForPlayer(bob);
         cacheBob.perShipHitCount = await instance.getPerShipHitCountForPlayer(bob);
+
+        contract = instance;
     });
 
     beforeEach(async () => {
-        let instance = await BattleshipTest.new();
+        // Before each test, create a new BattleShip contract with same state as the one above
+
+        /*let instance = await BattleshipTest.new();
         await instance.setTestMode(); // enable testMode
         boardShips = await instance.getBoardShips();
         var maxShipLength = boardShips.reduce(function(a, b) {
@@ -477,36 +484,25 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         await instance.joinPlayer(alice);
         await instance.joinPlayer(bob);
 
-        // Sets up ships like the following
-        // 5 5 5 5 5
-        // 4 4 4 4
-        // 3 3 3
-        // 3 3 3
-        // 2 2
-
-        /*for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
-            let shipWidth = boardShips[shipNumber];
-            // just put the ships next to each other
-            let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
-            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
-        }*/
-
-        await instance.submitHiddenShipsPacked(alice, cacheAlice.hiddenShips[0], cacheAlice.hiddenShips[1], cacheAlice.hiddenShips[2], cacheAlice.hiddenShips[3]);
-        await instance.submitHiddenShipsPacked(bob, cacheBob.hiddenShips[0], cacheBob.hiddenShips[1], cacheBob.hiddenShips[2], cacheBob.hiddenShips[3]);
+        console.log("submit hidden ships packed");
+        await instance.submitHiddenShipsPacked(cacheAlice.hiddenShips[0], cacheAlice.hiddenShips[1], {from: alice});
+        await instance.submitHiddenShipsPacked(cacheBob.hiddenShips[0], cacheBob.hiddenShips[1], {from: bob});
         
+        console.log("set player moves packed");
         await instance.setPlayerMovesPacked(alice, cacheAlice.movesCount, cacheAlice.moves[0], cacheAlice.moves[1], cacheAlice.moves[2], cacheAlice.moves[3], {from: owner});
-        await instance.setRevealShipsPackedForPlayer(alice, cacheAlice.revealShipsCount, cacheAlice.revealShips[0], cacheAlice.revealShips[1], cacheAlice.revealShips[2], cacheAlice.revealShips[3]);
-        await instance.setHitCountForPlayer(alice, cacheAlice.hitCount);
-        await instance.setPerShipHitCountForPlayer(alice, cacheAlice.perShipHitCount);
+        console.log("set reveal ships packed");
+        await instance.setRevealShipsPackedForPlayer(alice, cacheAlice.revealShipsCount, cacheAlice.revealShips[0], cacheAlice.revealShips[1], cacheAlice.revealShips[2], cacheAlice.revealShips[3], {from: owner});
+        console.log("set hit count");
+        await instance.setHitCountForPlayer(alice, cacheAlice.hitCount, {from: owner});
+        console.log("set per ship hit count packed");
+        await instance.setPerShipHitCountForPlayer(alice, cacheAlice.perShipHitCount, {from: owner});
 
         await instance.setPlayerMovesPacked(bob, cacheBob.movesCount, cacheBob.moves[0], cacheBob.moves[1], cacheBob.moves[2], cacheBob.moves[3], {from: owner});
-        await instance.setRevealShipsPackedForPlayer(bob, cacheBob.revealShipsCount, cacheBob.revealShips[0], cacheBob.revealShips[1], cacheBob.revealShips[2], cacheBob.revealShips[3]);
-        await instance.setHitCountForPlayer(bob, cacheBob.hitCount);
-        await instance.setPerShipHitCountForPlayer(bob, cacheBob.perShipHitCount);
+        await instance.setRevealShipsPackedForPlayer(bob, cacheBob.revealShipsCount, cacheBob.revealShips[0], cacheBob.revealShips[1], cacheBob.revealShips[2], cacheBob.revealShips[3], {from: owner});
+        await instance.setHitCountForPlayer(bob, cacheBob.hitCount, {from: owner});
+        await instance.setPerShipHitCountForPlayer(bob, cacheBob.perShipHitCount, {from: owner});
 
-        contract = instance;
+        contract = instance;*/
     });
 
     it("should determine winner correctly (player 1 wins)", async () => {
@@ -516,15 +512,28 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Miss'), 0, {from: alice});
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
         await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
-        //await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(1, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: bob});
+        await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(1, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: bob});
+       
+        // Since alice has won, alice also needs to reveal all her ships
+        // If not all ships revealed the checks below will fail!!
+        await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: alice});
+
         console.log('updating last opponent move');
-        await instance.updateLastOpponentMoveWithResult(convertMoveResultToNumber('Hit'), 4, {from: bob});
+        //await instance.updateLastOpponentMoveWithResult(convertMoveResultToNumber('Hit'), 4, {from: bob});
         console.log('reveal ship');
-        await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: bob});
-        console.log('make move');
-        await instance. makeMove(1, 4, {from: bob});
+        //await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: bob});
+        //console.log('make move');
+        //await instance.makeMove(1, 4, {from: bob});
+
+        console.log('check winner');
+
+        console.log('player1shipplacement', await instance.isShipPlacementSaneForPlayer(alice));
+        console.log('player2shipplacement', await instance.isShipPlacementSaneForPlayer(bob));
+
+        console.log('player1movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(alice));
+        console.log('player2movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(bob));
 
         let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
-        assert.equal(endState, GameEndState_Player1WinsValidGame, "alice wins because she sunk all the ships first");
+        assert.equal(endState.toNumber(), GameEndState_Player1WinsValidGame, "alice wins because she sunk all the ships first");
     });
 });
