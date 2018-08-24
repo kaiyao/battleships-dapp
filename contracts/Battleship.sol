@@ -472,7 +472,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
 
     }
 
-    /*function gameFinishedOrTimeoutAction() public {
+    function gameFinishedOrTimeoutAction() public {
         if (gameState == GameState.Created || gameState == GameState.PlayersJoined) {
             if (getTimestamp() > createdAt + 24 * 60 * 60) {
                 gameState = GameState.Ended;
@@ -509,7 +509,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
         } else {
             // Game has ended, do nothing
         }
-    }*/
+    }
 
     function checkWinnerWhenBothPlayersRevealedShips() public view returns (GameEndState) {
         require(gameState == GameState.ShipsRevealed, "Function can only be called when both players already revealed ships");
