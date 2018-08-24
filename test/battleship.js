@@ -8,6 +8,12 @@ const GAMESTATE_FINISHED = 3;
 const GAMESTATE_SHIPSREVEALED = 4;
 const GAMESTATE_ENDED = 5;
 
+const GameEndState_Draw = 0;
+const GameEndState_Player1WinsValidGame = 1;
+const GameEndState_Player2WinsValidGame = 2; 
+const GameEndState_Player1WinsInvalidGame = 3;
+const GameEndState_Player2WinsInvalidGame = 4;
+
 const emptyAddress = '0x0000000000000000000000000000000000000000';
 const testNonce = '0x1234000000000000000000000000000000000000';
 
@@ -23,6 +29,7 @@ function convertMoveResultToNumber(moveResult) {
     return moveResultEnum[moveResult];
 };
 
+/*
 contract('Game startup', async (accounts) => {
     const owner = accounts[0];
     const alice = accounts[1];
@@ -345,6 +352,7 @@ contract('Game make shots ' + assumptionsReminder, async (accounts) => {
 
     });
 });
+*/
 
 contract('Game finishing ' + assumptionsReminder, async (accounts) => {
     const owner = accounts[0];
@@ -354,8 +362,28 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
 
     let boardShips;
 
-    beforeEach(async () => {
+    let cacheAlice = {
+        revealShips: [],
+        revealShipsCount: 0,
+        hiddenShips: [],
+        hiddenShipsCount: 0,
+        moves: [],
+        movesCount: 0,
+        hitCount: 0,
+        perShipHitCount: [],
+    };
+
+    let cacheAliceMoves = [];
+    let cacheAliceMovesCount = 0;
+    let cacheAliceRevealedShips = [];
+    let cacheBobMoves = [];
+    let cacheBobMovesCount = 0;
+    let cacheBobRevealedShips = [];
+
+    before(async () => {
+
         let instance = await Battleship.new();
+        await instance.setTestMode(); // enable testMode
         boardShips = await instance.getBoardShips();
         var maxShipLength = boardShips.reduce(function(a, b) {
             return Math.max(a, b);
@@ -363,6 +391,13 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
 
         await instance.joinPlayer(alice);
         await instance.joinPlayer(bob);
+
+        // Sets up ships like the following
+        // 5 5 5 5 5
+        // 4 4 4 4
+        // 3 3 3
+        // 3 3 3
+        // 2 2
 
         for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
             let shipWidth = boardShips[shipNumber];
@@ -399,10 +434,85 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
             }
         }
 
+        // because it takes some time to set up the moves, we "cache" them and use them to create new instances in beforeEach
+        cacheAlice.moves = await instance.getPlayerMovesPacked(alice);
+        cacheAlice.movesCount = await instance.getPlayerMovesCount(alice);
+        cacheAlice.revealShips = await instance.getRevealShipsPackedForPlayer(alice);
+        cacheAlice.revealShipsCount = await instance.getRevealShipsCountForPlayer(alice);
+        cacheAlice.hiddenShips = await instance.getHiddenShipsPacked({from: alice});
+        cacheAlice.hiddenShipsCount = (await instance.getBoardShips()).length;
+        cacheAlice.hitCount = await instance.getHitCountForPlayer(alice);
+        cacheAlice.perShipHitCount = await instance.getPerShipHitCountForPlayer(alice);
+
+        cacheBob.moves = await instance.getPlayerMovesPacked(bob);
+        cacheBob.movesCount = await instance.getPlayerMovesCount(bob);
+        cacheBob.revealShips = await instance.getRevealShipsPackedForPlayer(bob);
+        cacheBob.revealShipsCount = await instance.getRevealShipsCountForPlayer(bob);
+        cacheBob.hiddenShips = await instance.getHiddenShipsPacked({from: bob});
+        cacheBob.hiddenShipsCount = (await instance.getBoardShips()).length;
+        cacheBob.hitCount = await instance.getHitCountForPlayer(bob);
+        cacheBob.perShipHitCount = await instance.getPerShipHitCountForPlayer(bob);
+    });
+
+    beforeEach(async () => {
+        let instance = await Battleship.new();
+        await instance.setTestMode(); // enable testMode
+        boardShips = await instance.getBoardShips();
+        var maxShipLength = boardShips.reduce(function(a, b) {
+            return Math.max(a, b);
+        });
+
+        await instance.joinPlayer(alice);
+        await instance.joinPlayer(bob);
+
+        // Sets up ships like the following
+        // 5 5 5 5 5
+        // 4 4 4 4
+        // 3 3 3
+        // 3 3 3
+        // 2 2
+
+        /*for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
+            let shipWidth = boardShips[shipNumber];
+            // just put the ships next to each other
+            let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
+            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
+            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
+            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+        }*/
+
+        await instance.submitHiddenShipsPacked(alice, cacheAlice.hiddenShips[0], cacheAlice.hiddenShips[1], cacheAlice.hiddenShips[2], cacheAlice.hiddenShips[3]);
+        await instance.submitHiddenShipsPacked(bob, cacheBob.hiddenShips[0], cacheBob.hiddenShips[1], cacheBob.hiddenShips[2], cacheBob.hiddenShips[3]);
+        
+        await instance.setPlayerMovesPacked(alice, cacheAlice.movesCount, cacheAlice.moves[0], cacheAlice.moves[1], cacheAlice.moves[2], cacheAlice.moves[3], {from: owner});
+        await instance.setRevealShipsPackedForPlayer(alice, cacheAlice.revealShipsCount, cacheAlice.revealShips[0], cacheAlice.revealShips[1], cacheAlice.revealShips[2], cacheAlice.revealShips[3]);
+        await instance.setHitCountForPlayer(alice, cacheAlice.hitCount);
+        await instance.setPerShipHitCountForPlayer(alice, cacheAlice.perShipHitCount);
+
+        await instance.setPlayerMovesPacked(bob, cacheBob.movesCount, cacheBob.moves[0], cacheBob.moves[1], cacheBob.moves[2], cacheBob.moves[3], {from: owner});
+        await instance.setRevealShipsPackedForPlayer(bob, cacheBob.revealShipsCount, cacheBob.revealShips[0], cacheBob.revealShips[1], cacheBob.revealShips[2], cacheBob.revealShips[3]);
+        await instance.setHitCountForPlayer(bob, cacheBob.hitCount);
+        await instance.setPerShipHitCountForPlayer(bob, cacheBob.perShipHitCount);
+
         contract = instance;
     });
 
-    it("todo", async () => {
+    it("should determine winner correctly (player 1 wins)", async () => {
         let instance = contract;
+
+        // last row with ship length = 2
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Miss'), 0, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
+        await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
+        //await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(1, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: bob});
+        console.log('updating last opponent move');
+        await instance.updateLastOpponentMoveWithResult(convertMoveResultToNumber('Hit'), 4, {from: bob});
+        console.log('reveal ship');
+        await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: bob});
+        console.log('make move');
+        await instance. makeMove(1, 4, {from: bob});
+
+        let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
+        assert.equal(endState, GameEndState_Player1WinsValidGame, "alice wins because she sunk all the ships first");
     });
 });

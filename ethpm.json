@@ -1,0 +1,15 @@
+{
+  "package_name": "battleship",
+  "version": "0.0.1",
+  "description": "Battleship Game Dapp",
+  "authors": [
+    "Kai Yao <kaiayo@banffcyber.com>"
+  ],
+  "keywords": [
+    "battleship"
+  ],
+  "dependencies": {
+    "zeppelin": "^1.3.0"
+  },
+  "license": "MIT"
+}

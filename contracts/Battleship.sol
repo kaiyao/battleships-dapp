@@ -1,6 +1,10 @@
 pragma solidity ^0.4.23;
 
-contract Battleship {
+import "../installed_contracts/zeppelin/contracts/ownership/Ownable.sol";
+import "../installed_contracts/zeppelin/contracts/lifecycle/Pausable.sol";
+import "../installed_contracts/zeppelin/contracts/payment/PullPayment.sol";
+
+contract Battleship is Ownable, Pausable, PullPayment {
     
     // Configure the game settings here
     uint public constant boardWidth = 10;
@@ -78,12 +82,12 @@ contract Battleship {
     
     address public player1;
     address public player2;
-    address winner;
-
-    address owner;
     
     mapping (address => PlayerInfo) public players;
     uint playerCount;
+
+    bool public testMode;
+    uint public testModeTimestamp;
 
     event StateChanged (
         address indexed _from,
@@ -102,10 +106,26 @@ contract Battleship {
         uint shipNumber
     );
     
-    constructor() public {
-        owner = msg.sender;     
+    constructor() public {    
         gameState = GameState.Created;
-        createdAt = block.timestamp;
+        createdAt = getTimestamp();
+    }
+
+    function setTestMode() public onlyOwner {
+        testMode = true;
+    }
+
+    function setTimestamp(uint _timestamp) public {
+        require(testMode, "Test mode only");
+        testModeTimestamp = _timestamp;
+    }
+
+    function getTimestamp() public view returns (uint) {
+        if (testMode) {
+            return testModeTimestamp;
+        } else {
+            return block.timestamp;
+        }
     }
 
     function getBoardShips() public view returns (uint[shipsPerPlayer]) {
@@ -162,7 +182,7 @@ contract Battleship {
         players[msg.sender].hiddenShips[shipNumber] = ShipHidden(commitHash, commitNonceHash);
         if (checkAllHiddenShipsSubmitted()) {
             gameState = GameState.Started;
-            startedAt = block.timestamp;
+            startedAt = getTimestamp();
             emit StateChanged(msg.sender, gameState);
         }        
     }
@@ -242,6 +262,51 @@ contract Battleship {
         emit MoveMade(msg.sender, x, y);
     }
 
+    function getRevealShipsPackedForPlayer(address player) public view returns (uint[shipsPerPlayer], uint[shipsPerPlayer], uint[shipsPerPlayer], uint[shipsPerPlayer]) {
+        uint[shipsPerPlayer] memory width;
+        uint[shipsPerPlayer] memory height;
+        uint[shipsPerPlayer] memory x;
+        uint[shipsPerPlayer] memory y;
+        for (uint i = 0; i < shipsPerPlayer; i++) {
+            Ship memory ship = players[player].revealShips[i];
+            width[i] = ship.width;
+            height[i] = ship.height;
+            x[i] = ship.x;
+            y[i] = ship.y;
+        }
+        return (width, height, x, y);
+    }
+
+    function getRevealShipsCountForPlayer(address player) public view returns (uint) {
+        return players[player].revealShipsCount;
+    }
+
+    function setRevealShipsPackedForPlayer(address player, uint revealShipsCount, uint[shipsPerPlayer] width, uint[shipsPerPlayer] height, uint[shipsPerPlayer] x, uint[shipsPerPlayer] y) public onlyOwner {
+        require(testMode, "Test Mode only");
+        players[player].revealShipsCount = revealShipsCount;
+        for (uint i = 0; i < shipsPerPlayer; i++) {
+            players[player].revealShips[i] = Ship(width[i], height[i], x[i], y[i]);
+        }
+    }
+
+    function getHitCountForPlayer(address player) public view returns (uint) {
+        return players[player].hitCount;
+    }
+
+    function setHitCountForPlayer(address player, uint hitCount) public {
+        require(testMode, "Test Mode only");
+        players[player].hitCount = hitCount;
+    }
+
+    function getPerShipHitCountForPlayer(address player) public view returns (uint[shipsPerPlayer]) {
+        return players[player].perShipHitCount;
+    }
+
+    function setPerShipHitCountForPlayer(address player, uint[shipsPerPlayer] perShipHitCount) public {
+        require(testMode, "Test Mode only");
+        players[player].perShipHitCount = perShipHitCount;
+    }
+
     // Checks that all the ships that the opponent has hit and sunk the player with, the player has revealed them
     function checkAllSunkShipsRevealed() public view returns (bool) {
         address player = msg.sender;
@@ -274,18 +339,22 @@ contract Battleship {
         return (movesX, movesY, movesResult, movesShipNumber);
     }
 
+    function setPlayerMovesPacked(address player, uint movesCount, uint[boardWidth * boardHeight] movesX, uint[boardWidth * boardHeight] movesY, MoveResult[boardWidth * boardHeight] movesResult, uint[boardWidth * boardHeight] movesShipNumber) public onlyOwner {
+        require(testMode);
+        
+        players[player].movesCount = movesCount;
+        for (uint i = 0; i < movesCount; i++) {
+            players[player].moves[i] = Move(movesX[i], movesY[i], movesResult[i], movesShipNumber[i]);
+        }
+    }
+
     function getPlayerMovesCount(address player) public view returns (uint) {
         return players[player].movesCount;
     }
 
-    function getPlayerMove(address player, uint index) public view returns (uint[4]) {
+    function getPlayerMove(address player, uint index) public view returns (uint, uint, MoveResult, uint) {
         Move storage move = players[player].moves[index];
-        uint[4] memory retValue;
-        retValue[0] = move.x;
-        retValue[1] = move.y;
-        retValue[2] = convertMoveResultToUInt(move.result);
-        retValue[3] = move.shipNumber;
-        return retValue;
+        return (move.x, move.y, move.result, move.shipNumber);
     }
 
     function convertMoveResultToUInt(MoveResult result) public pure returns (uint) {
@@ -313,10 +382,10 @@ contract Battleship {
 
         emit MoveUpdated(msg.sender, result, shipNumber);
 
-        if (players[opponent].hitCount >= shipSpaces) {
+        /*if (players[opponent].hitCount >= shipSpaces) {
             // opponent has won!
             setGameEnd();
-        }
+        }*/
     }
 
     function makeMoveAndUpdateLastMoveWithResult(uint x, uint y, MoveResult result, uint shipNumber) public {
@@ -353,7 +422,7 @@ contract Battleship {
         require(gameState == GameState.Started);
         require(msg.sender == player1 || msg.sender == player2);
         gameState = GameState.Finished;
-        finishedAt = block.timestamp;
+        finishedAt = getTimestamp();
         emit StateChanged(msg.sender, gameState);
     }
 
@@ -452,7 +521,7 @@ contract Battleship {
     function gameFinishedAction() public view returns (address) {
         require(gameState == GameState.Finished, "Game must be finished");
         
-        if (block.timestamp - finishedAt > 24 * 60 * 60) {
+        if (getTimestamp() - finishedAt > 24 * 60 * 60) {
             if (checkPlayerShipsRevealed(player1) == false && checkPlayerShipsRevealed(player2) == false) {
                 // draw
             } else if (checkPlayerShipsRevealed(player1) == true && checkPlayerShipsRevealed(player2) == false) {
@@ -469,7 +538,7 @@ contract Battleship {
         }
     }
 
-    function checkWinnerWhenBothPlayersRevealedShips() public returns (GameEndState) {
+    function checkWinnerWhenBothPlayersRevealedShips() public view returns (GameEndState) {
 
         // Check both players have valid ship placement
         bool player1ShipsPlacementValid = isShipPlacementSaneForPlayer(player1);
@@ -498,7 +567,23 @@ contract Battleship {
         }
 
         // Check which player sunk all ships first
+        uint player1Hits = 0;
+        uint player2Hits = 0;
+        for (uint i = 0; i < boardWidth * boardHeight; i++) {
+            if (players[player1].moves[i].result == MoveResult.Hit) {
+                player1Hits++;
+                if (player1Hits >= shipSpaces) {
+                    return GameEndState.Player1WinsValidGame;
+                }
+            }
 
+            if (players[player2].moves[i].result == MoveResult.Hit) {
+                player2Hits++;
+                if (player2Hits >= shipSpaces) {
+                    return GameEndState.Player2WinsValidGame;
+                }
+            }
+        }
 
     }
     
