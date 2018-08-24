@@ -62,7 +62,8 @@ contract Battleship is Ownable, Pausable, PullPayment {
     enum GameState { Created, PlayersJoined, Started, Finished, ShipsRevealed, Ended }
     GameState public gameState;
 
-    enum GameEndState { Draw, Player1WinsValidGame, Player2WinsValidGame, Player1WinsInvalidGame, Player2WinsInvalidGame }
+    enum GameEndState { Unknown, Draw, Player1WinsValidGame, Player2WinsValidGame, Player1WinsInvalidGame, Player2WinsInvalidGame }
+    GameEndState public gameEndState;
 
     // game must start within time limit of creation otherwise refund
     uint createdAt;
@@ -317,10 +318,10 @@ contract Battleship is Ownable, Pausable, PullPayment {
 
         emit MoveUpdated(msg.sender, result, shipNumber);
 
-        /*if (players[opponent].hitCount >= shipSpaces) {
+        if (players[opponent].hitCount >= shipSpaces) {
             // opponent has won!
-            setGameEnd();
-        }*/
+            setGameFinished();
+        }
     }
 
     function makeMoveAndUpdateLastMoveWithResult(uint x, uint y, MoveResult result, uint shipNumber) public {
@@ -351,11 +352,16 @@ contract Battleship is Ownable, Pausable, PullPayment {
         players[msg.sender].revealShips[shipNumber] = Ship(width, height, x, y);
 
         require(isShipPlacementSaneForPlayer(msg.sender), "Ship placement is not sane");
+
+        if (checkAllShipsRevealed()) {
+            gameState = GameState.ShipsRevealed;
+            emit StateChanged(msg.sender, gameState);
+        }
     }
         
-    function setGameEnd() private {
+    function setGameFinished() private {
         require(gameState == GameState.Started);
-        require(msg.sender == player1 || msg.sender == player2);
+        require(players[player1].hitCount >= shipSpaces || players[player2].hitCount >= shipSpaces);
         gameState = GameState.Finished;
         finishedAt = getTimestamp();
         emit StateChanged(msg.sender, gameState);
@@ -454,28 +460,48 @@ contract Battleship is Ownable, Pausable, PullPayment {
         return true;
 
     }
-    
-    function gameFinishedAction() public view returns (address) {
-        require(gameState == GameState.Finished, "Game must be finished");
-        
-        if (getTimestamp() - finishedAt > 24 * 60 * 60) {
-            if (checkPlayerShipsRevealed(player1) == false && checkPlayerShipsRevealed(player2) == false) {
-                // draw
-            } else if (checkPlayerShipsRevealed(player1) == true && checkPlayerShipsRevealed(player2) == false) {
-                // player 1 wins because player 2 did not reveal
-            } else if (checkPlayerShipsRevealed(player1) == false && checkPlayerShipsRevealed(player2) == true) {
-                // player 2 wins because player 1 did not reveal
-            } else {
-                // both players have revealed (presumably before the time limit is up), so we check for the winner
+
+    function gameFinishedOrTimeoutAction() public {
+        if (gameState == GameState.Created || gameState == GameState.PlayersJoined) {
+            if (getTimestamp() > createdAt + 24 * 60 * 60) {
+                gameState = GameState.Ended;
+                gameEndState = GameEndState.Draw;
             }
+        } else if (gameState == GameState.Started) {
+            if (getTimestamp() > startedAt + 24 * 60 * 60) {
+                gameState = GameState.Ended;
+                gameEndState = GameEndState.Draw;
+            }
+        } else if (gameState == GameState.Finished) { // not GameState.ShipsRevealed
+            if (getTimestamp() > finishedAt + 24 * 60 * 60) {
+                gameState = GameState.Ended;
+
+                bool player1ShipsRevealed = checkPlayerShipsRevealed(player1);
+                bool player2ShipsRevealed = checkPlayerShipsRevealed(player2);
+                if (player1ShipsRevealed && player2ShipsRevealed) {
+                    // Should not happen as game should auto-move to ShipsRevealed status
+                    checkAllShipsRevealed();
+                } else if (player1ShipsRevealed && !player2ShipsRevealed) {
+                    gameState = GameState.Ended;
+                    gameEndState = GameEndState.Player1WinsInvalidGame;
+                } else if (!player1ShipsRevealed && player2ShipsRevealed) {
+                    gameState = GameState.Ended;
+                    gameEndState = GameEndState.Player2WinsInvalidGame;
+                } else {
+                    gameState = GameState.Ended;
+                    gameEndState = GameEndState.Draw;
+                }
+            }
+        } else if (gameState == GameState.ShipsRevealed) { {
+            gameEndState = checkWinnerWhenBothPlayersRevealedShips();
+            gameState = GameState.Ended;
         } else {
-            if (checkPlayerShipsRevealed(player1) == true && checkPlayerShipsRevealed(player2) == true) {
-                // both players have revealed, so we check for the winner
-            }
+            // Game has ended, do nothing
         }
     }
 
     function checkWinnerWhenBothPlayersRevealedShips() public view returns (GameEndState) {
+        require(gameState == GameState.ShipsRevealed, "Function can only be called when both players already revealed ships");
 
         // Check both players have valid ship placement
         // Skip this because we already check when revealing ship. You cannot reveal a ship successfully if it is invalid

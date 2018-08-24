@@ -9,11 +9,12 @@ const GAMESTATE_FINISHED = 3;
 const GAMESTATE_SHIPSREVEALED = 4;
 const GAMESTATE_ENDED = 5;
 
-const GameEndState_Draw = 0;
-const GameEndState_Player1WinsValidGame = 1;
-const GameEndState_Player2WinsValidGame = 2; 
-const GameEndState_Player1WinsInvalidGame = 3;
-const GameEndState_Player2WinsInvalidGame = 4;
+const GameEndState_Unknown = 0;
+const GameEndState_Draw = 1;
+const GameEndState_Player1WinsValidGame = 2;
+const GameEndState_Player2WinsValidGame = 3; 
+const GameEndState_Player1WinsInvalidGame = 4;
+const GameEndState_Player2WinsInvalidGame = 5;
 
 const emptyAddress = '0x0000000000000000000000000000000000000000';
 const testNonce = '0x1234000000000000000000000000000000000000';
