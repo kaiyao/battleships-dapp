@@ -190,8 +190,21 @@ window.addEventListener('load', () => {
                 this.$set(this.playerGames[gameAddress], 'player2', val);
               });
               battleshipInstance.gameState.call().then(val => {
-                console.log("battleshipg", gameAddress, val);
+                console.log("battleshipGs", gameAddress, val);
                 this.$set(this.playerGames[gameAddress], 'state', val);
+              });
+              battleshipInstance.gameEndState.call().then(val => {
+                console.log("battleshipGes", gameAddress, val);
+                this.$set(this.playerGames[gameAddress], 'endState', val);
+              });
+              battleshipInstance.createdAt.call().then(val => {
+                this.$set(this.playerGames[gameAddress], 'createdAt', val);
+              });
+              battleshipInstance.startedAt.call().then(val => {
+                this.$set(this.playerGames[gameAddress], 'startedAt', val);
+              });
+              battleshipInstance.finishedAt.call().then(val => {
+                this.$set(this.playerGames[gameAddress], 'finishedAt', val);
               });
             };
             closure();
@@ -235,6 +248,19 @@ window.addEventListener('load', () => {
               battleshipInstance.gameState.call().then(val => {
                 console.log("battleshipg", gameAddress, val);
                 this.$set(this.openGames[gameAddress], 'state', val);
+              });
+              battleshipInstance.gameEndState.call().then(val => {
+                console.log("battleshipGes", gameAddress, val);
+                this.$set(this.playerGames[gameAddress], 'endState', val);
+              });
+              battleshipInstance.createdAt.call().then(val => {
+                this.$set(this.playerGames[gameAddress], 'createdAt', val);
+              });
+              battleshipInstance.startedAt.call().then(val => {
+                this.$set(this.playerGames[gameAddress], 'startedAt', val);
+              });
+              battleshipInstance.finishedAt.call().then(val => {
+                this.$set(this.playerGames[gameAddress], 'finishedAt', val);
               });
             };
             closure();
@@ -281,6 +307,15 @@ window.addEventListener('load', () => {
       enterGame: function (gameAddress) {
         game.gameAddress = "";
         game.gameAddress = gameAddress;
+      },
+
+      getGameStateString: function () {
+        let gameStateMapping = ['Created', 'PlayersJoined', 'Started', 'Finished', 'ShipsRevealed', 'Ended'];
+        return gameStateMapping[this.gameState];
+      },
+      getGameEndStateString: function () {
+        let gameEndStateMapping = ['Unknown', 'Draw', 'Player1WinsValidGame', 'Player2WinsValidGame', 'Player1WinsInvalidGame', 'Player2WinsInvalidGame'];
+        return gameEndStateMapping[this.gameEndState];
       }
 
     }
@@ -295,6 +330,7 @@ window.addEventListener('load', () => {
       account: "",
       gameAddress: "",
       gameState: -1,
+      gameEndState: -1,
       boardWidth: 0,
       boardHeight: 0,
       boardShips: [],
@@ -360,6 +396,9 @@ window.addEventListener('load', () => {
           if (!error) {
             battleshipInstance.gameState.call().then(val => {
               this.gameState = val.toNumber();
+            });
+            battleshipInstance.gameEndState.call().then(val => {
+              this.gameEndState = val.toNumber();
             });
             console.log(result);
           }
@@ -759,8 +798,12 @@ window.addEventListener('load', () => {
         return board;
       },
       getGameStateString: function () {
-        let gameStateMapping = ['Created', 'PlayersJoined', 'Started', 'Finished', 'Paid'];
+        let gameStateMapping = ['Created', 'PlayersJoined', 'Started', 'Finished', 'ShipsRevealed', 'Ended'];
         return gameStateMapping[this.gameState];
+      },
+      getGameEndStateString: function () {
+        let gameEndStateMapping = ['Unknown', 'Draw', 'Player1WinsValidGame', 'Player2WinsValidGame', 'Player1WinsInvalidGame', 'Player2WinsInvalidGame'];
+        return gameEndStateMapping[this.gameEndState];
       }
     },
     watch: {

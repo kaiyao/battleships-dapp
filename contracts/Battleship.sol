@@ -66,12 +66,12 @@ contract Battleship is Ownable, Pausable, PullPayment {
     GameEndState public gameEndState;
 
     // game must start within time limit of creation otherwise refund
-    uint createdAt;
+    uint public createdAt;
     // game must finish within time limit of starting otherwise refund
     // game finish => sunk squares of 1 player == number of squares of ships
-    uint startedAt;
+    uint public startedAt;
     // players must reveal ships within time limit of finishing
-    uint finishedAt;
+    uint public finishedAt;
     // if both players reveal, app checks validity of ships
     // - ships must not overlap
     // - hits/misses accurately reported
