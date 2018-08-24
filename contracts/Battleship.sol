@@ -106,6 +106,11 @@ contract Battleship is Ownable, Pausable, PullPayment {
         MoveResult moveResult,
         uint shipNumber
     );
+
+    event Logs (
+        address indexed _from,
+        string _data
+    );
     
     constructor() public {    
         gameState = GameState.Created;
@@ -237,7 +242,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
     }
     
     function makeMove(uint x, uint y) public {
-        require(gameState == GameState.Started, "Game must be started");
+        require(gameState == GameState.Started || gameState == GameState.Finished, "Game must be started");
         require(msg.sender == player1 || msg.sender == player2, "Sender must be player");
         
         // Check that it is the player's turn
@@ -250,6 +255,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
             "Must have submitted move result"
         );
         // Check that player has already revealed ship if a ship has been hit
+        // We put this here (instead of the update function) so that we can reveal after the hit is recorded
         require(checkAllSunkShipsRevealed(), "player must reveal ship if hit");
         
         players[msg.sender].moves[players[msg.sender].movesCount] = Move(x, y, MoveResult.Unknown, 0);
@@ -325,13 +331,18 @@ contract Battleship is Ownable, Pausable, PullPayment {
     }
 
     function makeMoveAndUpdateLastMoveWithResult(uint x, uint y, MoveResult result, uint shipNumber) public {
+        emit Logs(msg.sender, "Updating last opponent move 2");
         updateLastOpponentMoveWithResult(result, shipNumber);
+        emit Logs(msg.sender, "Make move 2");
         makeMove(x, y);
     }
 
     function makeMoveAndUpdateLastMoveWithResultAndRevealShip(uint x, uint y, MoveResult result, uint shipNumber, uint shipWidth, uint shipHeight, uint shipX, uint shipY, bytes32 nonce) public {
+        emit Logs(msg.sender, "Updating last opponent move 3");
         updateLastOpponentMoveWithResult(result, shipNumber);
+        emit Logs(msg.sender, "Revealing ship 3");
         revealShip(shipNumber, shipWidth, shipHeight, shipX, shipY, nonce);
+        emit Logs(msg.sender, "Make move 3");
         makeMove(x, y);
     }
     
@@ -461,7 +472,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
 
     }
 
-    function gameFinishedOrTimeoutAction() public {
+    /*function gameFinishedOrTimeoutAction() public {
         if (gameState == GameState.Created || gameState == GameState.PlayersJoined) {
             if (getTimestamp() > createdAt + 24 * 60 * 60) {
                 gameState = GameState.Ended;
@@ -492,30 +503,19 @@ contract Battleship is Ownable, Pausable, PullPayment {
                     gameEndState = GameEndState.Draw;
                 }
             }
-        } else if (gameState == GameState.ShipsRevealed) { {
+        } else if (gameState == GameState.ShipsRevealed) {
             gameEndState = checkWinnerWhenBothPlayersRevealedShips();
             gameState = GameState.Ended;
         } else {
             // Game has ended, do nothing
         }
-    }
+    }*/
 
     function checkWinnerWhenBothPlayersRevealedShips() public view returns (GameEndState) {
         require(gameState == GameState.ShipsRevealed, "Function can only be called when both players already revealed ships");
 
         // Check both players have valid ship placement
         // Skip this because we already check when revealing ship. You cannot reveal a ship successfully if it is invalid
-        /*bool player1ShipsPlacementValid = isShipPlacementSaneForPlayer(player1);
-        bool player2ShipsPlacementValid = isShipPlacementSaneForPlayer(player2);
-        if (player1ShipsPlacementValid && player1ShipsPlacementValid) {
-            // continue checks
-        } else if (player1ShipsPlacementValid && !player2ShipsPlacementValid) {
-            return GameEndState.Player1WinsInvalidGame;
-        } else if (!player1ShipsPlacementValid && player2ShipsPlacementValid) {
-            return GameEndState.Player2WinsInvalidGame;
-        } else {
-            return GameEndState.Draw;
-        }*/
 
         // Check both players have reported their ships correctly
         bool player1MovesReportedCorrectly = isMovesReportedCorrectlyForPlayer(player1);
@@ -549,6 +549,6 @@ contract Battleship is Ownable, Pausable, PullPayment {
             }
         }
 
-    }
+    } 
     
 }

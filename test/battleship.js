@@ -469,7 +469,7 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         cacheBob.hitCount = await instance.getHitCountForPlayer(bob);
         cacheBob.perShipHitCount = await instance.getPerShipHitCountForPlayer(bob);
 
-        //contract = instance;
+        contract = instance;
     });
 
     beforeEach(async () => {
@@ -513,8 +513,10 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Miss'), 0, {from: alice});
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
         await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
+        console.log('hahaha');
         await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(1, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: bob});
-       
+        console.log('hahaha2');
+
         // Since alice has won, alice also needs to reveal all her ships
         // If not all ships revealed the checks below will fail!!
         await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: alice});
@@ -526,13 +528,13 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         //console.log('make move');
         //await instance.makeMove(1, 4, {from: bob});
 
-        //console.log('check winner');
+        console.log('check winner');
 
-        //console.log('player1shipplacement', await instance.isShipPlacementSaneForPlayer(alice));
-        //console.log('player2shipplacement', await instance.isShipPlacementSaneForPlayer(bob));
+        console.log('player1shipplacement', await instance.isShipPlacementSaneForPlayer(alice));
+        console.log('player2shipplacement', await instance.isShipPlacementSaneForPlayer(bob));
 
-        //console.log('player1movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(alice));
-        //console.log('player2movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(bob));
+        console.log('player1movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(alice));
+        console.log('player2movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(bob));
 
         let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
         assert.equal(endState.toNumber(), GameEndState_Player1WinsValidGame, "alice wins because she sunk all the ships first");
