@@ -94,9 +94,24 @@ window.addEventListener('load', () => {
 
   window.web3 = new Web3(window.web3Provider);
 
+  let setGameToHashValue = function() {
+    console.log("hash changed!");
+    if (window.location.hash.substr(0, 3) == "#0x") {
+      window.game.gameAddress = window.location.hash.substr(1);
+      window.game.visible = true;
+      window.app.visible = false;
+    } else {
+      window.game.visible = false;
+      window.app.visible = true;
+    }
+  }
+  window.onhashchange = setGameToHashValue;
+  setTimeout(setGameToHashValue, 1);
+
   window.app = new Vue({
     el: '#app',
     data: {
+      visible: true,
       contracts: {},
       account: "",
       playerGames: {},
@@ -318,14 +333,13 @@ window.addEventListener('load', () => {
         return gameEndStateMapping[this.gameEndState];
       }
 
-    }
-
-
+    },
   });
 
   window.game = new Vue({
     el: '#game',
     data: {
+      visible: false,
       contracts: {},
       account: "",
       gameAddress: "",
@@ -692,10 +706,28 @@ window.addEventListener('load', () => {
           }
           let moveResultNumber = this.convertMoveResultToNumber(moveResult);
           console.log(x, y, x * 1, y * 1, moveResultNumber * 1, shipNumber * 1);
-          battleshipInstance.makeMoveAndUpdateLastMoveWithResult(x * 1, y * 1, moveResultNumber * 1, shipNumber * 1, { from: this.account }).then(response => {
-            console.log("move submitted and updated last move");
-            this.waitingForMovesUpdate = true;
-          });
+
+          // Check whether this is the last square for a particular ship, if it is we must reveal
+          let squaresHitForShip = 0;
+          for (let i = 0; i < this.opponentMoves.length; i++) {
+            if (this.opponentMoves[i].result == 'Hit' && this.opponentMoves[i].shipNumber == shipNumber) {
+              squaresHitForShip++;
+            }
+          }
+
+          if (squaresHitForShip == this.boardShips[shipNumber] - 1) {
+            console.log("to submit move and update last move and reveal ship", x * 1, y * 1, moveResultNumber * 1, shipNumber * 1, this.myShips[shipNumber].width, this.myShips[shipNumber].height, this.myShips[shipNumber].x, this.myShips[shipNumber].y, this.myShips[shipNumber].nonce);
+            battleshipInstance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(x * 1, y * 1, moveResultNumber * 1, shipNumber * 1, this.myShips[shipNumber].width, this.myShips[shipNumber].height, this.myShips[shipNumber].x, this.myShips[shipNumber].y, this.myShips[shipNumber].nonce, { from: this.account }).then(response => {
+              console.log("move submitted and updated last move and revealed ship");
+              this.waitingForMovesUpdate = true;
+            });
+          } else {
+            console.log("to submit move and update last move");
+            battleshipInstance.makeMoveAndUpdateLastMoveWithResult(x * 1, y * 1, moveResultNumber * 1, shipNumber * 1, { from: this.account }).then(response => {
+              console.log("move submitted and updated last move");
+              this.waitingForMovesUpdate = true;
+            });
+          }
         } else {        
           battleshipInstance.makeMove(x * 1, y * 1, { from: this.account }).then(response => {
             console.log("move submitted");
@@ -804,7 +836,7 @@ window.addEventListener('load', () => {
       getGameEndStateString: function () {
         let gameEndStateMapping = ['Unknown', 'Draw', 'Player1WinsValidGame', 'Player2WinsValidGame', 'Player1WinsInvalidGame', 'Player2WinsInvalidGame'];
         return gameEndStateMapping[this.gameEndState];
-      }
+      },
     },
     watch: {
       gameAddress: function (val) {

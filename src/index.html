@@ -68,8 +68,7 @@
 </head>
 
 <body>
-    <div class="container" id="app">
-
+    <div class="container">
         <div class="row">
             <div class="col-xs-12">
                 <h1 class="text-center">Battleship</h1>
@@ -77,6 +76,9 @@
                 <br/>
             </div>
         </div>
+    </div>
+
+    <div class="container" id="app" v-show="visible">        
 
         <div class="row">
 
@@ -98,7 +100,7 @@
                             <td>{{ id }}</td>
                             <td>{{ game.state }}</td>
                             <td>{{ game.startedAt }}</td>
-                            <td><a href="#" v-on:click.prevent="enterGame(id)">Enter Game</a></td>
+                            <td><a :href="'#' + id">Enter Game</a></td>
                         </tr>
                     </tbody>
                 </table>
@@ -145,9 +147,57 @@
         </div>
     </div>
 
-    <div class="container" id="game">
+    <div class="container" id="game" v-show="visible">
 
-        <div class="row" v-show="getGameStateString == 'Started'">
+        <div class="row">
+            <div class="col-xs-12">
+                <p><a href="#lobby">Back to Lobby</a></p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-8">
+                <p v-if="getGameStateString == 'Created'">
+                    Curret game state: created<br> 
+                    You can place your ships now, but you need to wait for another player to join to start the game.<br>
+                    Waited too long? If it has already been 24 hours since you created the game, you can end the game.
+                </p>
+                <p v-if="getGameStateString == 'PlayersJoined'">
+                    Curret game state: players joined<br>
+                    An opponent has joined the game. Place your ships to start the game. <br>
+                    If you have already placed your ships, wait for your opponent to do so. <br>
+                    Waited too long? If it has already been 24 hours since the other player joined, you can request to end the game.
+                </p>
+                <p v-if="getGameStateString == 'Started'">
+                    Curret game state: started!<br>
+                    The game has started. Take turns to make shots at each other. <br>
+                    If your opponent is not participating and it has already been 24 hours since the game started, you can request to end the game.
+                </p>
+                <p v-if="getGameStateString == 'Finished'">
+                    Curret game state: finished!<br>
+                    Looks like someone has won! To confirm, you will need to reveal your ships.<br>
+                    <input type="button" class="btn btn-default" value="Reveal ships"> <br>
+                    If it has already been 24 hours since the game finished and your opponent has not revealed his/her ships, you can request to end the game.
+                </p>
+                <p v-if="getGameStateString == 'ShipsRevealed'">
+                    Curret game state: ships revealed!<br>
+                    Both you and your opponent have revealed their ships.<br>
+                    Now you can end the game to determine the winner.
+                </p>
+                <p v-if="getGameStateString == 'Ended'">
+                    Curret game state: ended!<br>
+                    The game has ended. You can claim your prize/refund.
+                </p>
+            </div>
+            <div class="col-xs-4">
+                <div class="pull-right">
+                    <input v-if="getGameStateString != 'Ended'" type="button" class="btn btn-default" value="End Game">
+                    <input v-if="getGameStateString == 'Ended'" type="button" class="btn btn-default" value="Claim Prize/Refund">
+                </div>
+            </div>
+        </div>
+
+        <div class="row" v-show="getGameStateString != 'Created' && getGameStateString != 'PlayersJoined'">
             <div class="col-xs-6">
                 <h1>Your ships</h1>
                 <p>Your opponent's shots will appear here.</p>
