@@ -513,9 +513,9 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Miss'), 0, {from: alice});
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
         await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
-        console.log('hahaha');
+        //console.log('hahaha');
         await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(1, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: bob});
-        console.log('hahaha2');
+        //console.log('hahaha2');
 
         // Since alice has won, alice also needs to reveal all her ships
         // If not all ships revealed the checks below will fail!!
@@ -528,13 +528,13 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         //console.log('make move');
         //await instance.makeMove(1, 4, {from: bob});
 
-        console.log('check winner');
+        //console.log('check winner');
 
-        console.log('player1shipplacement', await instance.isShipPlacementSaneForPlayer(alice));
-        console.log('player2shipplacement', await instance.isShipPlacementSaneForPlayer(bob));
+        //console.log('player1shipplacement', await instance.isShipPlacementSaneForPlayer(alice));
+        //console.log('player2shipplacement', await instance.isShipPlacementSaneForPlayer(bob));
 
-        console.log('player1movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(alice));
-        console.log('player2movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(bob));
+        //console.log('player1movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(alice));
+        //console.log('player2movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(bob));
 
         let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
         assert.equal(endState.toNumber(), GameEndState_Player1WinsValidGame, "alice wins because she sunk all the ships first");
@@ -596,9 +596,9 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         let instance = contract;
 
         // last row with ship length = 2
-        await instance.makeMoveAndUpdateLastMoveWithResult(5, 4, convertMoveResultToNumber('Hit'), 0, {from: alice}); // incorrect report
-        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 0, {from: bob}); // incorrect report
-        await instance.makeMoveAndUpdateLastMoveWithResult(6, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(5, 4, convertMoveResultToNumber('Miss'), 0, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob}); // incorrect report
+        await instance.makeMoveAndUpdateLastMoveWithResult(6, 4, convertMoveResultToNumber('Miss'), 0, {from: alice}); // incorrect report
         await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Miss'), 0, {from: bob});
         await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(7, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: alice});
        
