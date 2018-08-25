@@ -380,6 +380,12 @@ contract Battleship is Ownable, Pausable, PullPayment {
         }
     }
 
+    function revealShipsPacked(uint[shipsPerPlayer] width, uint[shipsPerPlayer] height, uint[shipsPerPlayer] x, uint[shipsPerPlayer] y, bytes32[shipsPerPlayer] nonce) public onlyPlayers {
+        for (uint i = 0; i < shipsPerPlayer; i++) {
+            revealShip(i, width[i], height[i], x[i], y[i], nonce[i]);
+        }
+    }
+
     function getRevealShipsCountForPlayer(address player) public view returns (uint) {
         uint playerShipsCount;
         for (uint i = 0; i < shipsPerPlayer; i++) {

@@ -495,6 +495,18 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
 
     let contract;
     let boardShips;
+    let ships = [];
+
+    let getShipsPackedForm = function(ships) {
+        let packedShips = {width: [], height: [], x: [], y: [], nonce: []};
+        for (let i = 0; i < ships.length; i++) {
+            packedShips.width = ships[i].width;
+            packedShips.height = ships[i].height;
+            packedShips.x = ships[i].x;
+            packedShips.y = ships[i].y;
+            packedShips.nonce = ships[i].nonce;
+        }
+    }
 
     beforeEach(async () => {
 
@@ -519,8 +531,10 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
             let shipWidth = boardShips[shipNumber];
             // just put the ships next to each other
+            ships.push({width: shipWidth, height: 1, x: 0, y: shipNumber, nonce: testNonce});
             let commitHash = await instanceBatch.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
             commitHashes.push(commitHash);
+            
         }
         await instanceBatch.submitHiddenShipsPacked(commitHashes, {from: alice});
         await instanceBatch.submitHiddenShipsPacked(commitHashes, {from: bob});
@@ -547,6 +561,19 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         moves[moves.length - 1].result = convertMoveResultToNumber('Unknown');
         moves[moves.length - 1].shipNumber = 0;
 
+        let movesX = [];
+        let movesY = [];
+        let movesResult = [];
+        let movesShipNumber = [];
+        for (let i = 0; i < moves.length; i++) {
+            movesX.push(moves[i].x);
+            movesY.push(moves[i].y);
+            movesResult.push(moves[i].result);
+            movesShipNumber.push(moves[i].shipNumber);
+        }
+        //console.log(movesX, movesY, movesResult, movesShipNumber);
+        await instanceBatch.batchMakeMove(movesX, movesY, movesResult, movesShipNumber);
+
         contract = instanceBatch;
     });
 
@@ -557,31 +584,21 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Miss'), 0, {from: alice});
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
         await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
-        //console.log('hahaha');
-        await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(1, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: bob});
-        //console.log('hahaha2');
+        await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
 
-        // Since alice has won, alice also needs to reveal all her ships
-        // If not all ships revealed the checks below will fail!!
-        await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: alice});
+        // Declare game finished
+        await instance.tryToDeclareGameFinished();
 
-        //console.log('updating last opponent move');
-        //await instance.updateLastOpponentMoveWithResult(convertMoveResultToNumber('Hit'), 4, {from: bob});
-        //console.log('reveal ship');
-        //await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: bob});
-        //console.log('make move');
-        //await instance.makeMove(1, 4, {from: bob});
+        // Both players reveal their ships
+        let shipsPacked = getShipsPackedForm(ships);
+        await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: alice});
+        await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: bob});
 
-        //console.log('check winner');
+        await tryToDeclareGameTimeoutOrEnded();
 
-        //console.log('player1shipplacement', await instance.isShipPlacementSaneForPlayer(alice));
-        //console.log('player2shipplacement', await instance.isShipPlacementSaneForPlayer(bob));
-
-        //console.log('player1movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(alice));
-        //console.log('player2movesreportedcorrectly', await instance.isMovesReportedCorrectlyForPlayer(bob));
-
-        let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
+        let endState = await instance.gameEndState();
         assert.equal(endState.toNumber(), GameEndState_Player1WinsValidGame, "alice wins because she sunk all the ships first");
+        
     });
 
     it("should determine winner correctly (player 2 wins)", async () => {
