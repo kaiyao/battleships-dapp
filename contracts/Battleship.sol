@@ -145,6 +145,7 @@ contract Battleship is Ownable, PullPayment {
     function emergencyStop() public onlyOwner {
         gameState = GameState.Ended;
         gameEndState = GameEndState.Draw;
+        processWinnings();
     }
 
     function getTimestamp() public view returns (uint) {
