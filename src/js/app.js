@@ -1,5 +1,8 @@
 'use strict';
 
+const emptyAddress = '0x0000000000000000000000000000000000000000';
+const emptyBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
 // https://ethereum.stackexchange.com/questions/30024/how-to-keccak256-multiple-types-in-web3js-to-match-solidity-keccak256
 function keccak256(...args) {
   args = args.map(arg => {
@@ -340,8 +343,7 @@ window.addEventListener('load', () => {
     el: '#game',
     data: {
       visible: false,
-      contracts: {},
-      account: "",
+      contracts: {},      
       gameAddress: "",
       gameState: -1,
       gameEndState: -1,
@@ -352,10 +354,19 @@ window.addEventListener('load', () => {
         board: [],
         rotation: "horizontal"
       },
-      myShips: [],     
-      myMoves: [],
+      account: "",
+      myPlayerInfo: {
+        hiddenShips: [],
+        revealShips: [],
+        moves: []
+      },
       opponent: "",
-      opponentMoves: [],
+      opponentPlayerInfo: {
+        hiddenShips: [],
+        revealShips: [],
+        moves: []        
+      },
+      myShips: [],
       whoseTurn: "",
       waitingForMovesUpdate: false,
     },
@@ -415,28 +426,21 @@ window.addEventListener('load', () => {
               this.gameEndState = val.toNumber();
             });
             console.log(result);
+            this.updatePlayerInfoFromChain();
           }
         });
 
-        // Recall ships from localstorage
-        this.myShips = [];
-        this.getHiddenShips().then(hiddenShips => {
-          console.log("getHiddenShips");
-          for (let i = 0; i < hiddenShips.length; i++) {
-            let hiddenShip = hiddenShips[i];
-            let localStorageKey = this.gameAddress + '*' + this.account + '*' + hiddenShip.commitHash;
-            if (localStorage.getItem(localStorageKey) !== null) {
-              let data = JSON.parse(localStorage.getItem(localStorageKey));
-              this.myShips[i] = data;
-            }
-          }
-        });
-
-        this.updateMovesListFromChain();
+        this.updatePlayerInfoFromChain();
         // Get move added event
         var moveMadeEvent = battleshipInstance.MoveMade({}, {}, (error, result) => {
           if (!error) {
-            this.updateMovesListFromChain();
+            this.updatePlayerInfoFromChain();
+          }
+        });
+        // Get move added event
+        var shipAddedEvent = battleshipInstance.ShipAdded({}, {}, (error, result) => {
+          if (!error) {
+            this.updatePlayerInfoFromChain();
           }
         });
 
@@ -467,7 +471,7 @@ window.addEventListener('load', () => {
         });
       },
 
-      updateMovesListFromChain: function() {
+      updatePlayerInfoFromChain: function () {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
 
         // Get opponent
@@ -488,16 +492,16 @@ window.addEventListener('load', () => {
             let movesResult = val[2];
             let movesShipNumber = val[3];
 
-            this.opponentMoves = [];
+            this.opponentPlayerInfo.moves = [];
             for(let i = 0; i < movesCount; i++) {
-              this.opponentMoves.push({
+              this.opponentPlayerInfo.moves.push({
                 x: movesX[i].toNumber(),
                 y: movesY[i].toNumber(),
                 result: this.convertNumberToMoveResult(movesResult[i].toNumber()),
                 shipNumber: movesShipNumber[i].toNumber()
               });
             }
-            console.log("game-opponentmoves2", this.opponentMoves);
+            console.log("game-opponentmoves2", this.opponentPlayerInfo.moves);
           });
         });
         
@@ -513,17 +517,63 @@ window.addEventListener('load', () => {
             let movesResult = val[2];
             let movesShipNumber = val[3];
 
-            this.myMoves = [];
+            this.myPlayerInfo.moves = [];
             for(let i = 0; i < movesCount; i++) {
-              this.myMoves.push({
+              this.myPlayerInfo.moves.push({
                 x: movesX[i].toNumber(),
                 y: movesY[i].toNumber(),
                 result: this.convertNumberToMoveResult(movesResult[i].toNumber()),
                 shipNumber: movesShipNumber[i].toNumber()
               });
-              console.log("game-mymoves2", this.myMoves);
+              console.log("game-mymoves2", this.myPlayerInfo.moves);
             }
           });
+        });
+
+        // Get hidden ships
+        var getOpponentHiddenShipsPromise = battleshipInstance.getHiddenShipsPackedForPlayer.call(this.opponent).then(val => {
+          this.$set(this.opponentPlayerInfo, 'hiddenShips', val);
+        });
+
+        var getMyHiddenShipsPromise = battleshipInstance.getHiddenShipsPackedForPlayer.call(this.account).then(val => {
+          this.$set(this.myPlayerInfo, 'hiddenShips', val);
+        });
+
+        // Get revealed ships
+        var getOpponentRevealShipsPromise = battleshipInstance.getRevealShipsPackedForPlayer.call(this.opponent).then(val => {
+          let widthArr = val[0];
+          let heightArr = val[1];
+          let xArr = val[2];
+          let yArr = val[3];
+
+          this.opponentPlayerInfo.revealShips = [];
+          for(let i = 0; i < widthArr.length; i++) {
+            this.opponentPlayerInfo.revealShips.push({
+              width: widthArr[i].toNumber(),
+              height: heightArr[i].toNumber(),
+              x: xArr[i].toNumber(),
+              y: yArr[i].toNumber()
+            });
+          }
+          
+          this.opponentPlayerInfo.revealShips = val;
+        });
+
+        var getMyRevealShipsPromise = battleshipInstance.getRevealShipsPackedForPlayer.call(this.account).then(val => {
+          let widthArr = val[0];
+          let heightArr = val[1];
+          let xArr = val[2];
+          let yArr = val[3];
+
+          this.myPlayerInfo.revealShips = [];
+          for(let i = 0; i < widthArr.length; i++) {
+            this.myPlayerInfo.revealShips.push({
+              width: widthArr[i].toNumber(),
+              height: heightArr[i].toNumber(),
+              x: xArr[i].toNumber(),
+              y: yArr[i].toNumber()
+            });
+          }
         });
 
         // Get whose turn
@@ -532,12 +582,26 @@ window.addEventListener('load', () => {
           this.whoseTurn = val;
         });
 
-        Promise.all([getMyMovesPromise, getOpponentMovesPromise, getWhoseTurnPromise]).then(val => {
+        // Recall ships from localstorage
+        this.myShips = [];
+        var recallHiddenShipsPromise = this.getHiddenShips().then(hiddenShips => {
+          console.log("getHiddenShips");
+          this.myShips = [];
+          for (let i = 0; i < hiddenShips.length; i++) {
+            let commitHash = hiddenShips[i];
+            let localStorageKey = this.gameAddress + '*' + this.account + '*' + commitHash;
+            if (localStorage.getItem(localStorageKey) !== null) {
+              let data = JSON.parse(localStorage.getItem(localStorageKey));
+              this.myShips.push(data);
+            }
+          }
+        });
+
+        Promise.all([getMyMovesPromise, getMyHiddenShipsPromise, getMyRevealShipsPromise, getOpponentMovesPromise, getOpponentHiddenShipsPromise, getOpponentRevealShipsPromise, getWhoseTurnPromise, recallHiddenShipsPromise]).then(val => {
           console.log("Updated Moves!", val);
           this.waitingForMovesUpdate = false;
         });
       },
-
 
       addShipResetHighlightPlacement: function () {
         for (let i = 0; i < this.boardHeight; i++) {
@@ -629,11 +693,9 @@ window.addEventListener('load', () => {
           let ship = this.myShips[i];
           let nonce = generateRandomBytes32();
           this.$set(this.myShips[i], "nonce", nonce);
-          let commitNonceHash = keccak256(nonce);
           let commitHash = keccak256(ship.width, ship.height, ship.x, ship.y, nonce);
-          console.log("submit hidden ship", i, commitHash, commitNonceHash);
+          console.log("submit hidden ship", i, commitHash);
           commitHashes.push(commitHash);
-          commitNonceHashes.push(commitNonceHash);
 
           // store ship hash to ship position locally
           // (we store the hash rather than object of the ship positions, in case there is some kind of address reuse)
@@ -641,9 +703,9 @@ window.addEventListener('load', () => {
           localStorage.setItem(localStorageKey, JSON.stringify(this.myShips[i]));
         };
 
-        console.log(commitHashes, commitNonceHashes);
+        console.log(commitHashes);
 
-        battleshipInstance.submitHiddenShipsPacked(commitHashes, commitNonceHashes, { from: this.account }).then(response => {
+        battleshipInstance.submitHiddenShipsPacked(commitHashes, { from: this.account }).then(response => {
           console.log("hidden ships submitted packed");
         });
         
@@ -651,15 +713,11 @@ window.addEventListener('load', () => {
 
       getHiddenShips: function() {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
-        return battleshipInstance.getHiddenShipsPacked().then(response => {
+        return battleshipInstance.getHiddenShipsPackedForPlayer(this.account).then(response => {
           let hiddenShips = [];
-          let commitHashes = response[0];
-          let commitNonceHashes = response[1];
+          let commitHashes = response;
           for (let i = 0; i < commitHashes.length; i++) {
-            hiddenShips.push({
-              commitHash: commitHashes[i],
-              commitNonceHash: commitNonceHashes[i]
-            });
+            hiddenShips.push(commitHashes[i]);
           }
           return hiddenShips;
         });
@@ -693,9 +751,9 @@ window.addEventListener('load', () => {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
 
         // If opponent has already made a move, we need to respond first
-        if (this.opponentMoves.length > 0) {
+        if (this.opponentPlayerInfo.moves.length > 0) {
           console.log("need to report last opponent move status");
-          let lastMove = this.opponentMoves[this.opponentMoves.length - 1];
+          let lastMove = this.opponentPlayerInfo.moves[this.opponentPlayerInfo.moves.length - 1];
           let moveResult = 'Unknown';
           let shipNumber = 0;
           if (this.myShipsBoard[lastMove.y][lastMove.x] === undefined) {
@@ -707,33 +765,51 @@ window.addEventListener('load', () => {
           let moveResultNumber = this.convertMoveResultToNumber(moveResult);
           console.log(x, y, x * 1, y * 1, moveResultNumber * 1, shipNumber * 1);
 
-          // Check whether this is the last square for a particular ship, if it is we must reveal
-          let squaresHitForShip = 0;
-          for (let i = 0; i < this.opponentMoves.length; i++) {
-            if (this.opponentMoves[i].result == 'Hit' && this.opponentMoves[i].shipNumber == shipNumber) {
-              squaresHitForShip++;
-            }
-          }
-
-          if (squaresHitForShip == this.boardShips[shipNumber] - 1) {
-            console.log("to submit move and update last move and reveal ship", x * 1, y * 1, moveResultNumber * 1, shipNumber * 1, this.myShips[shipNumber].width, this.myShips[shipNumber].height, this.myShips[shipNumber].x, this.myShips[shipNumber].y, this.myShips[shipNumber].nonce);
-            battleshipInstance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(x * 1, y * 1, moveResultNumber * 1, shipNumber * 1, this.myShips[shipNumber].width, this.myShips[shipNumber].height, this.myShips[shipNumber].x, this.myShips[shipNumber].y, this.myShips[shipNumber].nonce, { from: this.account }).then(response => {
-              console.log("move submitted and updated last move and revealed ship");
-              this.waitingForMovesUpdate = true;
-            });
-          } else {
-            console.log("to submit move and update last move");
-            battleshipInstance.makeMoveAndUpdateLastMoveWithResult(x * 1, y * 1, moveResultNumber * 1, shipNumber * 1, { from: this.account }).then(response => {
-              console.log("move submitted and updated last move");
-              this.waitingForMovesUpdate = true;
-            });
-          }
+          console.log("to submit move and update last move");
+          battleshipInstance.makeMoveAndUpdateLastMoveWithResult(x * 1, y * 1, moveResultNumber * 1, shipNumber * 1, { from: this.account }).then(response => {
+            console.log("move submitted and updated last move");
+            this.waitingForMovesUpdate = true;
+          });
         } else {        
           battleshipInstance.makeMove(x * 1, y * 1, { from: this.account }).then(response => {
             console.log("move submitted");
             this.waitingForMovesUpdate = true;
           });
         }
+      },
+
+      tryToDeclareGameFinished: function () {
+        var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+
+        battleshipInstance.tryToDeclareGameFinished({ from: this.account }).then(response => {
+          console.log("tried to declare game finished");
+          this.waitingForMovesUpdate = true;
+        });
+      },
+
+      revealShips: function () {
+        if (this.myShips.length != this.boardShips.length) {
+          alert("It seems that the data about your ships is missing. Information about your ships is not stored on the blockchain until you have revealed it, therefore it is stored only it localstorage. Please use the same computer/browser to continue the game. Try to refresh the page and see if it works.");
+          return;
+        }
+
+        var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+
+        let ships = this.myShips;
+        let packedShips = {width: [], height: [], x: [], y: [], nonce: []};
+        for (let i = 0; i < ships.length; i++) {
+            packedShips.width.push(ships[i].width);
+            packedShips.height.push(ships[i].height);
+            packedShips.x.push(ships[i].x);
+            packedShips.y.push(ships[i].y);
+            packedShips.nonce.push(ships[i].nonce);
+        }
+
+        console.log(packedShips.width, packedShips.height, packedShips.x, packedShips.y, packedShips.nonce);
+        battleshipInstance.revealShipsPacked(packedShips.width, packedShips.height, packedShips.x, packedShips.y, packedShips.nonce, { from: this.account }).then(response => {
+          console.log("tried to declare game finished");
+          this.waitingForMovesUpdate = true;
+        });
       },
 
       convertMoveResultToNumber: function (moveResult) {
@@ -809,8 +885,8 @@ window.addEventListener('load', () => {
           board[i] = new Array(this.boardWidth);
         }
 
-        for (let i = 0; i < this.opponentMoves.length; i++) {
-          let move = this.opponentMoves[i];
+        for (let i = 0; i < this.opponentPlayerInfo.moves.length; i++) {
+          let move = this.opponentPlayerInfo.moves[i];
           board[move.y][move.x] = move;
         }
 
@@ -822,12 +898,38 @@ window.addEventListener('load', () => {
           board[i] = new Array(this.boardWidth);
         }
 
-        for (let i = 0; i < this.myMoves.length; i++) {
-          let move = this.myMoves[i];
+        for (let i = 0; i < this.myPlayerInfo.moves.length; i++) {
+          let move = this.myPlayerInfo.moves[i];
           board[move.y][move.x] = move;
         }
 
         return board;
+      },
+      opponentHitCount: function() {
+        let count = 0;
+        for (let i = 0; i < this.opponentPlayerInfo.moves.length; i++) {
+          let move = this.opponentPlayerInfo.moves[i];
+          if (move.result == 'Hit') {
+            count++;
+          }
+        }
+        return count;
+      },
+      myHitCount: function() {
+        let count = 0;
+        for (let i = 0; i < this.myPlayerInfo.moves.length; i++) {
+          let move = this.myPlayerInfo.moves[i];
+          if (move.result == 'Hit') {
+            count++;
+          }
+        }
+        return count;
+      },
+      myHiddenShipsOnChainCount: function () {
+        return this.myPlayerInfo.hiddenShips.filter(x => x != emptyBytes32).length;
+      },
+      boardShipsSum: function () {
+        return this.boardShips.reduce((a, b) => a + b, 0);
       },
       getGameStateString: function () {
         let gameStateMapping = ['Created', 'PlayersJoined', 'Started', 'Finished', 'ShipsRevealed', 'Ended'];

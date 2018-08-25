@@ -201,6 +201,7 @@
             <div class="col-xs-6">
                 <h1>Your ships</h1>
                 <p>Your opponent's shots will appear here.</p>
+                <p>Opponent hit your ships: {{ opponentHitCount }} / {{ boardShipsSum }}</p>
                 <p>Red = Hit, White = Miss, Grey = Your ships</p>
                 <table class="game-board" id="my-ships-board">
                     <tbody>
@@ -216,8 +217,21 @@
             <div class="col-xs-6">
                 <h1>Opponent's ships</h1>
                 <p v-if="waitingForMovesUpdate">Waiting for update from the blockchain...</p>
-                <p v-if="!waitingForMovesUpdate && whoseTurn == account">It's your turn! Click on a grid below to call a shot</p>
-                <p v-if="!waitingForMovesUpdate && whoseTurn != account">It's not your turn. Please wait for your opponent to make a move</p>
+                <div v-if="getGameStateString == 'Started'">
+                    <p v-if="!waitingForMovesUpdate && whoseTurn == account">It's your turn! Click on a grid below to call a shot</p>
+                    <p v-if="!waitingForMovesUpdate && whoseTurn != account">It's not your turn. Please wait for your opponent to make a move</p>
+                    <p>You hit opponent's ships: {{ myHitCount }} / {{ boardShipsSum }}</p>
+                    <p v-if="myHitCount >= boardShipsSum">
+                        Looks like you may have won! Click the button below to verify.<br>
+                        <input type="button" value="Finish game" v-on:click="tryToDeclareGameFinished">
+                    </p>
+                </div>
+                <div v-if="getGameStateString == 'Finished'">
+                    <p>
+                        You will now need to reveal your ship locations on the blockchain to proceed.<br>
+                        <input type="button" value="Reveal Ships" v-on:click="revealShips">
+                    </p>
+                </div>
                 <p>Red = Hit, White = Miss, Yellow = Waiting for confirmation</p>
                 <table class="game-board" id="opponent-ships-board">
                     <tbody>
@@ -233,6 +247,8 @@
         <div class="row" v-show="getGameStateString == 'Created' || getGameStateString == 'PlayersJoined'">
             <div class="col-xs-6 add-ships">
                 <h1>Add ships</h1>
+
+                <p v-if="myHiddenShipsOnChainCount >= boardShips.length">You have already submitted your ships and cannot submit again. Please wait for the other player to do the same.</p>
 
                 <table class="add-progress-tracker">
                     <tr>

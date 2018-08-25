@@ -9,9 +9,9 @@ contract Battleship is Ownable, Pausable, PullPayment {
     // Configure the game settings here
     uint public constant boardWidth = 10;
     uint public constant boardHeight = 10;
-    uint constant shipsPerPlayer = 5;
-    uint[shipsPerPlayer] public boardShips = [5, 4, 3, 3, 2];    
-    uint constant shipSpaces = 5 + 4 + 3 + 3 + 2;
+    uint constant shipsPerPlayer = 2;
+    uint[shipsPerPlayer] public boardShips = [3, 2];    
+    uint constant shipSpaces = 3 + 2;
     
     struct Ship {
         uint width;
@@ -96,6 +96,11 @@ contract Battleship is Ownable, Pausable, PullPayment {
     event StateChanged (
         address indexed _from,
         GameState newState
+    );
+
+    event ShipAdded (
+        address indexed _from,
+        uint shipNumber
     );
 
     event MoveMade (
@@ -198,6 +203,8 @@ contract Battleship is Ownable, Pausable, PullPayment {
         require(getHiddenShipsCountForPlayer(msg.sender) < shipsPerPlayer, "Cannot resubmit if all ships submitted");
 
         players[msg.sender].hiddenShips[shipNumber] = commitHash;
+        emit ShipAdded(msg.sender, shipNumber);
+
         if (checkAllHiddenShipsSubmitted()) {
             gameState = GameState.Started;
             startedAt = getTimestamp();
