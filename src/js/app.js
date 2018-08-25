@@ -743,6 +743,11 @@ window.addEventListener('load', () => {
           return;
         }
 
+        if (this.getGameStateString !== 'Started') {
+          alert("The game has finished.");
+          return;
+        }
+
         if (this.myMovesBoard[y][x] !== undefined) {
           alert("You have already made a shot at this coordinate!");
           return;

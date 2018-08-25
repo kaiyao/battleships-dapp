@@ -202,17 +202,26 @@
                 <h1>Your ships</h1>
                 <p>Your opponent's shots will appear here.</p>
                 <p>Opponent hit your ships: {{ opponentHitCount }} / {{ boardShipsSum }}</p>
-                <p>Red = Hit, White = Miss, Grey = Your ships</p>
                 <table class="game-board" id="my-ships-board">
                     <tbody>
                         <tr v-for="(row, rowIndex) in myShipsBoard">
-                            <td v-for="(col, colIndex) in row" v-bind:class="{ 'has-ship': myShipsBoard[rowIndex][colIndex] !== undefined, 'hit': opponentMovesBoard[rowIndex][colIndex] !== undefined && myShipsBoard[rowIndex][colIndex] !== undefined, 'miss': opponentMovesBoard[rowIndex][colIndex] !== undefined && myShipsBoard[rowIndex][colIndex] === undefined }" v-on:mouseover="addShipHighlightPlacement(colIndex, rowIndex)" v-on:mouseout="addShipResetHighlightPlacement" v-on:click="addShipSavePlacement(colIndex, rowIndex)">
+                            <td v-for="(col, colIndex) in row" v-bind:class="{ 'has-ship': myShipsBoard[rowIndex][colIndex] !== undefined, 'hit': opponentMovesBoard[rowIndex][colIndex] !== undefined && opponentMovesBoard[rowIndex][colIndex].result == 'Hit', 'miss': opponentMovesBoard[rowIndex][colIndex] !== undefined && myShipsBoard[rowIndex][colIndex] === undefined, 'unknown': opponentMovesBoard[rowIndex][colIndex] !== undefined && opponentMovesBoard[rowIndex][colIndex].result == 'Unknown',}" v-on:mouseover="addShipHighlightPlacement(colIndex, rowIndex)" v-on:mouseout="addShipResetHighlightPlacement" v-on:click="addShipSavePlacement(colIndex, rowIndex)">
                                 <!-- {{rowIndex}},{{colIndex}},{{ addBoard[rowIndex] ? addBoard[rowIndex][colIndex] : "a" }} -->
                                 <span v-if="myShipsBoard[rowIndex][colIndex] !== undefined">{{ myShipsBoard[rowIndex][colIndex] + 1 }}</span>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+                <p></p>
+                <p>
+                    Legend:
+                    <ul>
+                        <li>Red = Hit</li>
+                        <li>White = Miss</li>
+                        <li>Yellow = Waiting for confirmation</li>
+                        <li>Grey = Your ships that are not shot yet</li>
+                    </ul>
+                </p>
             </div>
             <div class="col-xs-6">
                 <h1>Opponent's ships</h1>
@@ -221,34 +230,29 @@
                     <p v-if="!waitingForMovesUpdate && whoseTurn == account">It's your turn! Click on a grid below to call a shot</p>
                     <p v-if="!waitingForMovesUpdate && whoseTurn != account">It's not your turn. Please wait for your opponent to make a move</p>
                     <p>You hit opponent's ships: {{ myHitCount }} / {{ boardShipsSum }}</p>
-                    <p v-if="myHitCount >= boardShipsSum && waitingForMovesUpdate">
-                        Looks like you may have won! Click the button below to proceed.<br>
-                        <input type="button" class="btn btn-default" value="Declare Game Finished" v-on:click="tryToDeclareGameFinished">
-                    </p>
+                    <template v-if="myHitCount >= boardShipsSum && waitingForMovesUpdate">
+                        <p>Looks like you may have won! Click the button below to proceed.</p>
+                        <p><input type="button" class="btn btn-default" value="Declare Game Finished" v-on:click="tryToDeclareGameFinished"></p>
+                    </template>
                 </div>
                 <div v-if="getGameStateString == 'Finished'">
-                    <p v-if="myRevealShipsOnChainCount < boardShips.length">
-                        You will now need to reveal your ship locations on the blockchain to proceed.<br>
-                        <input type="button" class="btn btn-default" value="Reveal Ships" v-on:click="revealShips">
-                    </p>
-                    <p v-else>
-                        You have revealed your ships, now you need to wait for your opponent to do so.
-                    </p>
+                    <template v-if="myRevealShipsOnChainCount < boardShips.length">
+                        <p>You will now need to reveal your ship locations on the blockchain. Click the button below to proceed.</p>
+                        <p><input type="button" class="btn btn-default" value="Reveal Ships" v-on:click="revealShips"></p>
+                    </template>
+                    <template v-else>
+                        <p>You have revealed your ships, now you need to wait for your opponent to do so.</p>
+                    </template>
                 </div>
                 <div v-if="getGameStateString == 'ShipsRevealed'">
-                    <p>
-                        Both players have revealed their ships. Click on the button below to have the blockchain determine the winner.<br>
-                        <input type="button" class="btn btn-default" value="Compute Winner" v-on:click="tryToDeclareGameTimeoutOrEnded">
-                    </p>
+                    <p>Both players have revealed their ships. Click on the button below to have the blockchain determine the winner.</p>
+                    <p><input type="button" class="btn btn-default" value="Compute Winner" v-on:click="tryToDeclareGameTimeoutOrEnded"></p>
                 </div>
                 <div v-if="getGameStateString == 'Ended'">
-                    <p>
-                        The game has ended with a result of {{ getGameEndStateString }}<br>
-                        Click the button below to claim your winnings/refunds (you may have a small amount even if you lost the game!).<br>
-                        <input type="button" class="btn btn-default" value="Claim Prize/Refund" v-on:click="withdrawPayments">
-                    </p>
+                    <p>The game has ended with a result of {{ getGameEndStateString }}</p>
+                    <p>Click the button below to claim your winnings/refunds (you may have a small amount even if you lost the game!).</p>
+                    <p><input type="button" class="btn btn-default" value="Claim Prize/Refund" v-on:click="withdrawPayments"></p>
                 </div>
-                <p>Red = Hit, White = Miss, Yellow = Waiting for confirmation</p>
                 <table class="game-board" id="opponent-ships-board">
                     <tbody>
                         <tr v-for="(row, rowIndex) in myShipsBoard">
@@ -258,6 +262,16 @@
                         </tr>
                     </tbody>
                 </table>
+                <p></p>
+                <p>
+                    Legend:
+                    <ul>
+                        <li>Red = Hit</li>
+                        <li>White = Miss</li>
+                        <li>Yellow = Waiting for confirmation</li>
+                        <li>Grey = Your cursor location</li>
+                    </ul>
+                </p>
             </div>
         </div>
         <div class="row" v-show="getGameStateString == 'Created' || getGameStateString == 'PlayersJoined'">
