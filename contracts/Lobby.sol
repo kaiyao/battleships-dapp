@@ -37,7 +37,7 @@ contract Lobby is Ownable {
 
     function createOpenGame() public payable returns (address) {
         address newContract = new Battleship();
-        Battleship(newContract).joinPlayer(msg.sender);
+        Battleship(newContract).joinGameForPlayer(msg.sender);
         games[msg.sender].push(newContract);
         openGames.push(newContract);
         emit OpenGameCreated(msg.sender, newContract);
@@ -46,8 +46,8 @@ contract Lobby is Ownable {
 
     function createGameWithOpponent(address opponent) public payable returns (address) {
         address newContract = new Battleship();
-        Battleship(newContract).joinPlayer(msg.sender);
-        Battleship(newContract).joinPlayer(opponent);
+        Battleship(newContract).joinGameForPlayer(msg.sender);
+        Battleship(newContract).joinGameForPlayer(opponent);
         games[msg.sender].push(newContract);
         games[opponent].push(newContract);
         emit GameWithOpponentCreated(msg.sender, opponent, newContract);
@@ -57,7 +57,7 @@ contract Lobby is Ownable {
     function joinOpenGame(uint gameIndex) public payable returns (address) {
         address gameAddress = openGames[gameIndex];
 
-        Battleship(gameAddress).joinPlayer(msg.sender);
+        Battleship(gameAddress).joinGameForPlayer(msg.sender);
         games[msg.sender].push(gameAddress);
         delete openGames[gameIndex];
         emit OpenGameJoined(msg.sender, gameAddress);

@@ -50,8 +50,8 @@ contract('Game startup', async (accounts) => {
         let instance = contract;
         assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should be CREATED");
 
-        await instance.joinPlayer(alice);
-        await instance.joinPlayer(bob);
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
 
         assert.equal(await instance.player1(), alice, "player 1 should match");
         assert.equal(await instance.player2(), bob, "player 2 should match");
@@ -63,10 +63,10 @@ contract('Game startup', async (accounts) => {
         let instance = contract;
         assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should be CREATED");
 
-        await instance.joinPlayer(alice);
+        await instance.joinGameForPlayer(alice);
         assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should still be CREATED");
 
-        await instance.joinPlayer(bob);
+        await instance.joinGameForPlayer(bob);
         assert.equal(await instance.gameState(), GAMESTATE_PLAYERSJOINED, "game state should be PLAYERSJOINED");
     });
 
@@ -74,17 +74,17 @@ contract('Game startup', async (accounts) => {
         let instance = contract;
         assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should be CREATED");
 
-        instance.joinPlayer(alice);
-        await catchRevert(instance.joinPlayer(alice));
+        instance.joinGameForPlayer(alice);
+        await catchRevert(instance.joinGameForPlayer(alice));
     });
 
     it("should not be able add three players", async () => {
         let instance = contract;
         assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should be CREATED");
 
-        await instance.joinPlayer(alice);
-        await instance.joinPlayer(bob);
-        await catchRevert(instance.joinPlayer(carol));
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
+        await catchRevert(instance.joinGameForPlayer(carol));
     });
 });
 
@@ -105,48 +105,41 @@ contract('Game add (hidden) ships', async (accounts) => {
 
     it("should be able add ships with only one player", async () => {
         let instance = contract;
-        await instance.joinPlayer(alice);
+        await instance.joinGameForPlayer(alice);
 
         let shipNumber = 0; // test the smallest possible ship number
         let shipWidth = boardShips[shipNumber];
         let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, 0, testNonce);
-        let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-        await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
+        await instance.submitHiddenShip(shipNumber, commitHash, {from: alice});
 
-        let hiddenShips = await instance.getHiddenShipsPacked({from: alice});
-        assert.equal(hiddenShips[0][shipNumber], commitHash, "ship should be in list");
-        assert.equal(hiddenShips[1][shipNumber], commitNonceHash, "ship should be in list");
+        let hiddenShips = await instance.getHiddenShipsPackedForPlayer(alice);
+        assert.equal(hiddenShips[shipNumber], commitHash, "ship should be in list");
 
         shipNumber = boardShips.length - 1; // test the largest possible ship number
         shipWidth = boardShips[shipNumber];
         commitHash = await instance.calculateCommitHash(shipWidth, 1, 2, 2, testNonce);
-        commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-        await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
+        await instance.submitHiddenShip(shipNumber, commitHash, {from: alice});
 
-        hiddenShips = await instance.getHiddenShipsPacked({from: alice});
-        assert.equal(hiddenShips[0][shipNumber], commitHash, "ship should be in list");
-        assert.equal(hiddenShips[1][shipNumber], commitNonceHash, "ship should be in list");
+        hiddenShips = await instance.getHiddenShipsPackedForPlayer(alice);
+        assert.equal(hiddenShips[shipNumber], commitHash, "ship should be in list");
     });
 
     it("should be able add ships with two players", async () => {
         let instance = contract;
-        await instance.joinPlayer(alice);
-        await instance.joinPlayer(bob);
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
 
         let shipNumber = 0;
         let shipWidth = boardShips[shipNumber];
         let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, 0, testNonce);
-        let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-        await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
+        await instance.submitHiddenShip(shipNumber, commitHash, {from: alice});
 
-        let hiddenShips = await instance.getHiddenShipsPacked({from: alice});
-        assert.equal(hiddenShips[0][shipNumber], commitHash, "alice ship should be in list");
-        assert.equal(hiddenShips[1][shipNumber], commitNonceHash, "alice ship should be in list");
+        let hiddenShips = await instance.getHiddenShipsPackedForPlayer(alice);
+        assert.equal(hiddenShips[shipNumber], commitHash, "alice ship should be in list");
 
-        await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
-        hiddenShips = await instance.getHiddenShipsPacked({from: bob});
-        assert.equal(hiddenShips[0][shipNumber], commitHash, "bob ship should be in list");
-        assert.equal(hiddenShips[1][shipNumber], commitNonceHash, "bob ship should be in list");
+        await instance.submitHiddenShip(shipNumber, commitHash, {from: bob});
+        hiddenShips = await instance.getHiddenShipsPackedForPlayer(bob);
+        assert.equal(hiddenShips[shipNumber], commitHash, "bob ship should be in list");
     });
 
     it("should not be able add ships if not a player", async () => {
@@ -154,8 +147,7 @@ contract('Game add (hidden) ships', async (accounts) => {
         let shipNumber = 0;
         let shipWidth = boardShips[shipNumber];
         let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, 0, testNonce);
-        let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-        await catchRevert(instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: carol}));
+        await catchRevert(instance.submitHiddenShip(shipNumber, commitHash, {from: carol}));
     });
 
     it("should not be able add ships outside of number of ships allowed", async () => {
@@ -164,11 +156,10 @@ contract('Game add (hidden) ships', async (accounts) => {
         let invalidShipNumber;
         let shipWidth = boardShips[shipNumber];
         let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, 0, testNonce);
-        let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
         invalidShipNumber = boardShips.length;
-        await catchRevert(instance.submitHiddenShip(invalidShipNumber, commitHash, commitNonceHash, {from: alice}));
+        await catchRevert(instance.submitHiddenShip(invalidShipNumber, commitHash, {from: alice}));
         invalidShipNumber = -1;
-        await catchRevert(instance.submitHiddenShip(invalidShipNumber, commitHash, commitNonceHash, {from: alice}));
+        await catchRevert(instance.submitHiddenShip(invalidShipNumber, commitHash, {from: alice}));
     });
 
 });
@@ -185,8 +176,8 @@ contract('Game check ships have been placed', async (accounts) => {
         let instance = await Battleship.new();
         boardShips = await instance.getBoardShips();
 
-        await instance.joinPlayer(alice);
-        await instance.joinPlayer(bob);
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
 
         contract = instance;
     });
@@ -200,8 +191,7 @@ contract('Game check ships have been placed', async (accounts) => {
             let shipWidth = boardShips[shipNumber];
             // just put the ships next to each other
             let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
-            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
+            await instance.submitHiddenShip(shipNumber, commitHash, {from: alice});
         }
 
         assert.equal(await instance.gameState(), GAMESTATE_PLAYERSJOINED, "game state should be PLAYERSJOINED");
@@ -210,8 +200,7 @@ contract('Game check ships have been placed', async (accounts) => {
             let shipWidth = boardShips[shipNumber];
             // just put the ships next to each other
             let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
-            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+            await instance.submitHiddenShip(shipNumber, commitHash, {from: bob});
         }
 
         assert.equal(await instance.gameState(), GAMESTATE_STARTED, "game state should be STARTED");
@@ -226,8 +215,7 @@ contract('Game check ships have been placed', async (accounts) => {
             let shipWidth = boardShips[shipNumber];
             // just put the ships next to each other
             let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
-            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
+            await instance.submitHiddenShip(shipNumber, commitHash, {from: alice});
         }
 
         await catchRevert(instance.makeMove(0, 0, {from: alice}));
@@ -236,8 +224,7 @@ contract('Game check ships have been placed', async (accounts) => {
             let shipWidth = boardShips[shipNumber];
             // just put the ships next to each other
             let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
-            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+            await instance.submitHiddenShip(shipNumber, commitHash, {from: bob});
         }
 
         await instance.makeMove(0, 0, {from: alice});
@@ -258,23 +245,21 @@ contract('Game make shots ' + assumptionsReminder, async (accounts) => {
         let instance = await Battleship.new();
         boardShips = await instance.getBoardShips();
 
-        await instance.joinPlayer(alice);
-        await instance.joinPlayer(bob);
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
 
         for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
             let shipWidth = boardShips[shipNumber];
             // just put the ships next to each other
             let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
-            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
+            await instance.submitHiddenShip(shipNumber, commitHash, {from: alice});
         }
 
         for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
             let shipWidth = boardShips[shipNumber];
             // just put the ships next to each other
             let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
-            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+            await instance.submitHiddenShip(shipNumber, commitHash, {from: bob});
         }
 
         contract = instance;
@@ -334,25 +319,6 @@ contract('Game make shots ' + assumptionsReminder, async (accounts) => {
         await instance.makeMove(0, 0, {from: alice});
         await catchRevert(instance.makeMove(0, 0, {from: bob}));
     });
-
-    it("should not be able to make move if ship shot down but not revealed", async () => {
-        let instance = contract;
-
-        // First ship is 5 squares long, we simulate hitting that
-        await instance.makeMove(0, 0, {from: alice});
-        await instance.makeMoveAndUpdateLastMoveWithResult(0, 0, convertMoveResultToNumber('Hit'), 0, {from: bob});
-        for (let i = 1; i <= 3; i++) {
-            //console.log(i, 'alice');
-            await instance.makeMoveAndUpdateLastMoveWithResult(i, 0, convertMoveResultToNumber('Hit'), 0, {from: alice});
-            //console.log(i, 'bob');
-            await instance.makeMoveAndUpdateLastMoveWithResult(i, 0, convertMoveResultToNumber('Hit'), 0, {from: bob});
-        }
-        await instance.makeMoveAndUpdateLastMoveWithResult(4, 0, convertMoveResultToNumber('Hit'), 0, {from: alice});
-        await catchRevert(instance.makeMoveAndUpdateLastMoveWithResult(4, 0, convertMoveResultToNumber('Hit'), 0, {from: bob}));
-
-        await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(4, 0, convertMoveResultToNumber('Hit'), 0, 5, 1, 0, 0, testNonce, {from: bob});
-
-    });
 });
 
 
@@ -402,8 +368,8 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
             return Math.max(a, b);
         });
 
-        await instance.joinPlayer(alice);
-        await instance.joinPlayer(bob);
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
 
         // Sets up ships like the following
         // 5 5 5 5 5
@@ -482,8 +448,8 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
             return Math.max(a, b);
         });
 
-        await instance.joinPlayer(alice);
-        await instance.joinPlayer(bob);
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
 
         //console.log("submit hidden ships packed");
         await instance.submitHiddenShipsPacked(cacheAlice.hiddenShips[0], cacheAlice.hiddenShips[1], {from: alice});
@@ -627,8 +593,8 @@ contract('Game detects invalid ship placements ' + assumptionsReminder, async (a
             return Math.max(a, b);
         });
 
-        await instance.joinPlayer(alice);
-        await instance.joinPlayer(bob);
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
 
         // Sets up ships like the following
         // 5 5 5 5 5
@@ -678,8 +644,8 @@ contract('Game detects invalid ship placements ' + assumptionsReminder, async (a
             return Math.max(a, b);
         });
 
-        await instance.joinPlayer(alice);
-        await instance.joinPlayer(bob);
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
 
         for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
             let shipWidth = boardShips[shipNumber];

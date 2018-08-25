@@ -120,6 +120,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
         createdAt = getTimestamp();
     }
 
+    // Miscellaneous helper functions
     function getTimestamp() public view returns (uint) {
         if (testMode) {
             return testModeTimestamp;
@@ -131,27 +132,6 @@ contract Battleship is Ownable, Pausable, PullPayment {
     function getBoardShips() public view returns (uint[shipsPerPlayer]) {
         return boardShips;
     }
-        
-    function joinGame() public {
-        joinGameForPlayer(msg.sender);
-    }
-
-    function joinGameForPlayer(address newPlayer) public {
-        require(gameState == GameState.Created);
-        require(newPlayer != player1 && newPlayer != player2);
-
-        if (player1 == 0) {
-            player1 = newPlayer;
-        } else {            
-            player2 = newPlayer;
-        }
-
-        if (player1 != 0 && player2 != 0) {
-            gameState = GameState.PlayersJoined;
-            emit StateChanged(msg.sender, gameState);
-        }
-    } 
-
 
     function getOpponentAddress() public view returns (address) {
         return getOpponentAddressForPlayer(msg.sender);
@@ -177,10 +157,45 @@ contract Battleship is Ownable, Pausable, PullPayment {
         return calculatedCommitNonceHash;
     }
 
+    // ******************
+    // * Adding Players *
+    // ******************
+    // The following functions are for adding players to the game.
+    // Once both players have been added, the game will move to "PlayersJoined" state.
+        
+    function joinGame() public {
+        joinGameForPlayer(msg.sender);
+    }
+
+    function joinGameForPlayer(address newPlayer) public {
+        require(gameState == GameState.Created);
+        require(newPlayer != player1 && newPlayer != player2);
+
+        if (player1 == 0) {
+            player1 = newPlayer;
+        } else {            
+            player2 = newPlayer;
+        }
+
+        if (player1 != 0 && player2 != 0) {
+            gameState = GameState.PlayersJoined;
+            emit StateChanged(msg.sender, gameState);
+        }
+    } 
+
+    // ****************
+    // * Submit Ships *
+    // ****************
+    // The following functions are for submitting the ship "commits" to the blockchain.
+    // The first player can do so before the second player joins.
+    // Once the player's ships have been submitted, we don't let the player submit again.
+    // When both players have submitted their ships, the game moves to "Started" state.
+
     function submitHiddenShip(uint shipNumber, bytes32 commitHash) public onlyPlayers {
         require(gameState == GameState.Created || gameState == GameState.PlayersJoined, "Game must not have started");
         require(betAmount == 0 || players[msg.sender].betAmount >= betAmount, "Can only place ships if game is a no-bet game or bet has been placed");
         require(shipNumber >=0 && shipNumber < shipsPerPlayer, "Ship number must be in range");
+        require(getHiddenShipsCountForPlayer(msg.sender) < shipsPerPlayer, "Cannot resubmit if all ships submitted");
 
         players[msg.sender].hiddenShips[shipNumber] = commitHash;
         if (checkAllHiddenShipsSubmitted()) {
@@ -220,6 +235,13 @@ contract Battleship is Ownable, Pausable, PullPayment {
             return false;
         }
     }
+
+    // **********************
+    // * Make shots (moves) *
+    // **********************
+    // The following functions are making shots. Each player will take turns to make shots.
+    // Also, before making a shot, the player must update the status of the opponent's previous shot.
+    // Shots are called moves here...
 
     // Check whose turn it is 
     // When game starts, both players have 0 moves: player 1 starts first
@@ -309,6 +331,17 @@ contract Battleship is Ownable, Pausable, PullPayment {
         }
         return hitCount;
     }
+
+    // *****************
+    // * Game Finished *
+    // *****************
+    // When a player thinks he/she has won (because his/her number of hits >= shipSpaces),
+    // or when a player thinks he/she has lost (because all of his/her ships have sunk),
+    // the player can call the function below to move the game to "finished" state.
+    //
+    // If players forget to call the function immediately, they can still call the function later.
+    // The winner will still be the first player who sinks the ships of the opponent 
+    // (based on the moves history).
         
     function tryToDeclareGameFinished() public onlyPlayers {
         require(gameState == GameState.Started);
@@ -319,6 +352,12 @@ contract Battleship is Ownable, Pausable, PullPayment {
         emit StateChanged(msg.sender, gameState);
     }
 
+    // ****************
+    // * Reveal Ships *
+    // ****************
+    // Once the game is "finished", both players will be asked to reveal their ships.
+    // This is used to check that all the ships match the initial commit.
+    // Once both players have revealed their ships, the game moves to the "ShipsRevealed" stage.
     
     function revealShip(uint shipNumber, uint width, uint height, uint x, uint y, bytes32 nonce) public onlyPlayers {
         require(shipNumber >= 0 && shipNumber < shipsPerPlayer, "Ship number must be within range");
@@ -331,11 +370,9 @@ contract Battleship is Ownable, Pausable, PullPayment {
         );
         
         bytes32 calculatedCommitHash = keccak256(abi.encodePacked(width, height, x, y, nonce));
-        require(calculatedCommitHash == players[msg.sender].hiddenShips[shipNumber].commitHash, "Ship reveal hash mismatch");
+        require(calculatedCommitHash == players[msg.sender].hiddenShips[shipNumber], "Ship reveal hash mismatch");
 
         players[msg.sender].revealShips[shipNumber] = Ship(width, height, x, y);
-
-        require(isShipPlacementSaneForPlayer(msg.sender), "Ship placement is not sane");
 
         if (checkAllShipsRevealed()) {
             gameState = GameState.ShipsRevealed;
@@ -360,6 +397,21 @@ contract Battleship is Ownable, Pausable, PullPayment {
         } else {
             return false;
         }
+    }
+
+    function getRevealShipsPackedForPlayer(address player) public view returns (uint[shipsPerPlayer], uint[shipsPerPlayer], uint[shipsPerPlayer], uint[shipsPerPlayer]) {
+        uint[shipsPerPlayer] memory width;
+        uint[shipsPerPlayer] memory height;
+        uint[shipsPerPlayer] memory x;
+        uint[shipsPerPlayer] memory y;
+        for (uint i = 0; i < shipsPerPlayer; i++) {
+            Ship memory ship = players[player].revealShips[i];
+            width[i] = ship.width;
+            height[i] = ship.height;
+            x[i] = ship.x;
+            y[i] = ship.y;
+        }
+        return (width, height, x, y);
     }
 
     function isShipPlacementSaneForPlayer(address player) public view returns (bool) {
@@ -390,6 +442,19 @@ contract Battleship is Ownable, Pausable, PullPayment {
 
         return true;
     }
+
+    // *****************
+    // * Conclude Game *
+    // *****************
+    // Once both players have revealed their ships (or there has been some timeout),
+    // a player can request to end the game.
+    //
+    // The functions below will then check that:
+    // 1) Players' ships are placed in valid positions
+    // 2) Players have reported the correct outcome of each move to their opponent.
+    //
+    // If the above conditions are true, the player who sinks all the opponent's ships first wins.
+    // If either of these fails, the player who did not "cheat" is the winner. 
 
     /** @dev Checks that the player has reported (for the opponent's moves) the correct outcome of each move
       * @param player The player to check for
