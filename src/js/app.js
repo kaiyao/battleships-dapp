@@ -447,8 +447,8 @@ window.addEventListener('load', () => {
         battleshipInstance.gameState.call().then(val => {
           this.gameState = val.toNumber();
         });
-        battleshipInstance.gameState.call().then(val => {
-          this.gameState = val.toNumber();
+        battleshipInstance.gameEndState.call().then(val => {
+          this.gameEndState = val.toNumber();
         });
         
         battleshipInstance.player1.call().then(val => {
@@ -688,8 +688,6 @@ window.addEventListener('load', () => {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
         
         let commitHashPromises = [];
-        let commitHashes = [];
-        let commitNonceHashes = [];
         for(let i = 0; i < this.myShips.length; i++) {
           let ship = this.myShips[i];
           let nonce = generateRandomBytes32();
@@ -699,24 +697,23 @@ window.addEventListener('load', () => {
         };
         Promise.all(commitHashPromises).then(response => {
           console.log("Hashes calculated", response);
-          for (let i = 0; i < response; i++) {
-            let commitHash = response[i];
+          let commitHashes = response;
+          for (let i = 0; i < commitHashes.length; i++) {
+            let commitHash = commitHashes[i];
             console.log("submit hidden ship", i, commitHash);
-            commitHashes.push(commitHash);
 
             // store ship hash to ship position locally
             // (we store the hash rather than object of the ship positions, in case there is some kind of address reuse)
             let localStorageKey = this.gameAddress + '*' + this.account + '*' + commitHash;
             localStorage.setItem(localStorageKey, JSON.stringify(this.myShips[i]));
           }
-        });
 
-        console.log(commitHashes);
-
-        battleshipInstance.submitHiddenShipsPacked(commitHashes, { from: this.account }).then(response => {
-          console.log("hidden ships submitted packed");
-        });
+          console.log(commitHashes);
+          battleshipInstance.submitHiddenShipsPacked(commitHashes, { from: this.account }).then(response => {
+            console.log("hidden ships submitted packed");
+          });
         
+        });
       },
 
       getHiddenShips: function() {
@@ -817,6 +814,23 @@ window.addEventListener('load', () => {
         battleshipInstance.revealShipsPacked(packedShips.width, packedShips.height, packedShips.x, packedShips.y, packedShips.nonce, { from: this.account }).then(response => {
           console.log("tried to declare game finished");
           this.waitingForMovesUpdate = true;
+        });
+      },
+
+      tryToDeclareGameTimeoutOrEnded: function () {
+        var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+
+        battleshipInstance.tryToDeclareGameTimeoutOrEnded({ from: this.account }).then(response => {
+          console.log("tried to declare game timeout or ended");
+          this.waitingForMovesUpdate = true;
+        });
+      },
+
+      withdrawPayments: function () {
+        var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+
+        battleshipInstance.withdrawPayments({ from: this.account }).then(response => {
+          console.log("withdrawn payments");
         });
       },
 
@@ -935,6 +949,9 @@ window.addEventListener('load', () => {
       },
       myHiddenShipsOnChainCount: function () {
         return this.myPlayerInfo.hiddenShips.filter(x => x != emptyBytes32).length;
+      },
+      myRevealShipsOnChainCount: function () {
+        return this.myPlayerInfo.revealShips.filter(x => x.width != 0).length;
       },
       boardShipsSum: function () {
         return this.boardShips.reduce((a, b) => a + b, 0);

@@ -520,11 +520,13 @@ contract Battleship is Ownable, Pausable, PullPayment {
             if (getTimestamp() > createdAt + 24 * 60 * 60) {
                 gameState = GameState.Ended;
                 gameEndState = GameEndState.Draw;
+                emit StateChanged(msg.sender, gameState);
             }
         } else if (gameState == GameState.Started) {
             if (getTimestamp() > startedAt + 24 * 60 * 60) {
                 gameState = GameState.Ended;
                 gameEndState = GameEndState.Draw;
+                emit StateChanged(msg.sender, gameState);
             }
         } else if (gameState == GameState.Finished) { // not GameState.ShipsRevealed
             if (getTimestamp() > finishedAt + 24 * 60 * 60) {
@@ -545,10 +547,12 @@ contract Battleship is Ownable, Pausable, PullPayment {
                     gameState = GameState.Ended;
                     gameEndState = GameEndState.Draw;
                 }
+                emit StateChanged(msg.sender, gameState);
             }
         } else if (gameState == GameState.ShipsRevealed) {
             gameEndState = checkWinnerWhenBothPlayersRevealedShips();
             gameState = GameState.Ended;
+            emit StateChanged(msg.sender, gameState);
         } else {
             // Game has ended, do nothing
         }

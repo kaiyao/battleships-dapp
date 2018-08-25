@@ -221,15 +221,31 @@
                     <p v-if="!waitingForMovesUpdate && whoseTurn == account">It's your turn! Click on a grid below to call a shot</p>
                     <p v-if="!waitingForMovesUpdate && whoseTurn != account">It's not your turn. Please wait for your opponent to make a move</p>
                     <p>You hit opponent's ships: {{ myHitCount }} / {{ boardShipsSum }}</p>
-                    <p v-if="myHitCount >= boardShipsSum">
-                        Looks like you may have won! Click the button below to verify.<br>
-                        <input type="button" value="Finish game" v-on:click="tryToDeclareGameFinished">
+                    <p v-if="myHitCount >= boardShipsSum && waitingForMovesUpdate">
+                        Looks like you may have won! Click the button below to proceed.<br>
+                        <input type="button" class="btn btn-default" value="Declare Game Finished" v-on:click="tryToDeclareGameFinished">
                     </p>
                 </div>
                 <div v-if="getGameStateString == 'Finished'">
-                    <p>
+                    <p v-if="myRevealShipsOnChainCount < boardShips.length">
                         You will now need to reveal your ship locations on the blockchain to proceed.<br>
-                        <input type="button" value="Reveal Ships" v-on:click="revealShips">
+                        <input type="button" class="btn btn-default" value="Reveal Ships" v-on:click="revealShips">
+                    </p>
+                    <p v-else>
+                        You have revealed your ships, now you need to wait for your opponent to do so.
+                    </p>
+                </div>
+                <div v-if="getGameStateString == 'ShipsRevealed'">
+                    <p>
+                        Both players have revealed their ships. Click on the button below to have the blockchain determine the winner.<br>
+                        <input type="button" class="btn btn-default" value="Compute Winner" v-on:click="tryToDeclareGameTimeoutOrEnded">
+                    </p>
+                </div>
+                <div v-if="getGameStateString == 'Ended'">
+                    <p>
+                        The game has ended with a result of {{ getGameEndStateString }}<br>
+                        Click the button below to claim your winnings/refunds (you may have a small amount even if you lost the game!).<br>
+                        <input type="button" class="btn btn-default" value="Claim Prize/Refund" v-on:click="withdrawPayments">
                     </p>
                 </div>
                 <p>Red = Hit, White = Miss, Yellow = Waiting for confirmation</p>
