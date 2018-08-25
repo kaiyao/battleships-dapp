@@ -15,7 +15,7 @@ contract('Lobby open games', async (accounts) => {
         let games = await instance.getGamesBelongingToPlayer({from: alice});
         assert.equal(games.length, 0, "list of games should be empty at the start");
         
-        await instance.createOpenGame({from: alice});
+        await instance.createOpenGame(0, {from: alice});
         
         games = await instance.getGamesBelongingToPlayer({from: alice});
         //console.log(games);
@@ -117,7 +117,7 @@ contract('Lobby non-open games', async (accounts) => {
         let games = await instance.getGamesBelongingToPlayer({from: alice});
         assert.equal(games.length, 0, "list of games should be empty at the start");
         
-        await instance.createGameWithOpponent(bob, {from: alice});
+        await instance.createGameWithOpponent(bob, 0, {from: alice});
         
         games = await instance.getGamesBelongingToPlayer({from: alice});
         assert.equal(games.length, 1, "list of games should have one game after creating new game");
@@ -149,7 +149,7 @@ contract('Lobby test add two same players', async (accounts) => {
         let games = await instance.getGamesBelongingToPlayer({from: alice});
         assert.equal(games.length, 0, "list of games should be empty at the start");
         
-        await catchRevert(instance.createGameWithOpponent(alice, {from: alice}));
+        await catchRevert(instance.createGameWithOpponent(alice, 0, {from: alice}));
     });
 
     it("should not be allowed to join game with same player as first player", async () => {
@@ -158,7 +158,7 @@ contract('Lobby test add two same players', async (accounts) => {
         let games = await instance.getGamesBelongingToPlayer({from: alice});
         assert.equal(games.length, 0, "list of games should be empty at the start");
 
-        await instance.createOpenGame({from: alice});
+        await instance.createOpenGame(0, {from: alice});
 
         const openGameIndex = 0;
         await catchRevert(instance.joinOpenGame(openGameIndex, {from: alice}));

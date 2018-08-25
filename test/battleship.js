@@ -43,7 +43,7 @@ contract('Game startup', async (accounts) => {
     // https://ethereum.stackexchange.com/questions/15670/deploying-a-contract-at-test-time-with-truffle
     // https://ethereum.stackexchange.com/questions/15567/truffle-smart-contract-testing-does-not-reset-state/15574#15574
     beforeEach(async () => {
-        contract = await Battleship.new()
+        contract = await Battleship.new(0)
      });
 
     it("should be able add players", async () => {
@@ -98,7 +98,7 @@ contract('Game add (hidden) ships', async (accounts) => {
     let boardShips;
 
     beforeEach(async () => {
-        let instance = await Battleship.new();
+        let instance = await Battleship.new(0);
         boardShips = await instance.getBoardShips();
         contract = instance;
     });
@@ -174,7 +174,7 @@ contract('Game check ships have been placed', async (accounts) => {
     let boardShips;
 
     beforeEach(async () => {
-        let instance = await Battleship.new();
+        let instance = await Battleship.new(0);
         boardShips = await instance.getBoardShips();
 
         await instance.joinGameForPlayer(alice);
@@ -244,7 +244,7 @@ contract('Game make shots ' + assumptionsReminder, async (accounts) => {
     let boardShips;
 
     beforeEach(async () => {
-        let instance = await Battleship.new();
+        let instance = await Battleship.new(0);
         boardShips = await instance.getBoardShips();
 
         await instance.joinGameForPlayer(alice);
@@ -355,7 +355,7 @@ contract('Game test batch add ships and batch move test functions', async(accoun
     }
 
     it ('batch ship add and move should match normal ship add and move', async() => {
-        let instance = await BattleshipTest.new(timestamp);
+        let instance = await BattleshipTest.new(0, timestamp);
         await instance.setTestMode(); // enable testMode
         boardShips = await instance.getBoardShips();
         var maxShipLength = boardShips.reduce(function(a, b) {
@@ -410,7 +410,7 @@ contract('Game test batch add ships and batch move test functions', async(accoun
         //console.log(normalBobMoves);
 
         // Try all the batch features
-        let instanceBatch = await BattleshipTest.new(timestamp);
+        let instanceBatch = await BattleshipTest.new(0, timestamp);
         await instanceBatch.setTestMode(); // enable testMode
         boardShips = await instanceBatch.getBoardShips();
         var maxShipLength = boardShips.reduce(function(a, b) {
@@ -502,7 +502,7 @@ contract('Game endings - timeouts', async (accounts) => {
     let timestamp = 1535187520; 
 
     beforeEach(async () => {
-        let instance = await BattleshipTest.new(timestamp);
+        let instance = await BattleshipTest.new(0, timestamp);
         boardShips = await instance.getBoardShips();
         contract = instance;
      });
@@ -617,7 +617,7 @@ contract('Game endings ' + assumptionsReminder, async (accounts) => {
 
     beforeEach(async () => {
 
-        let instanceBatch = await BattleshipTest.new(timestamp);
+        let instanceBatch = await BattleshipTest.new(0, timestamp);
         await instanceBatch.setTestMode(); // enable testMode
         boardShips = await instanceBatch.getBoardShips();
         var maxShipLength = boardShips.reduce(function(a, b) {
@@ -951,7 +951,7 @@ contract('Game detects invalid ship placements ' + assumptionsReminder, async (a
 
     it("should not allow overlapping ships", async () => {
 
-        let instance = await Battleship.new();
+        let instance = await Battleship.new(0);
         boardShips = await instance.getBoardShips();
         var maxShipLength = boardShips.reduce(function(a, b) {
             return Math.max(a, b);
@@ -994,7 +994,7 @@ contract('Game detects invalid ship placements ' + assumptionsReminder, async (a
 
     it("should not allow ships to be placed out of board", async () => {
 
-        let instance = await Battleship.new();
+        let instance = await Battleship.new(0);
         let boardShips = await instance.getBoardShips();
         let boardWidth = instance.boardWidth();
         let boardHeight = instance.boardHeight();

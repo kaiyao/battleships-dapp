@@ -4,7 +4,7 @@ import "./Battleship.sol";
 
 contract BattleshipTest is Battleship {
 
-    constructor(uint _timestamp) public {
+    constructor(uint _betAmount, uint _timestamp) Battleship (_betAmount) public {
         testMode = true;
         testModeTimestamp = _timestamp;
     }

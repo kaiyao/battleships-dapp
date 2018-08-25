@@ -11,9 +11,9 @@ contract Battleship is Ownable, Pausable, PullPayment {
     // Configure the game settings here
     uint public constant boardWidth = 10;
     uint public constant boardHeight = 10;
-    uint constant shipsPerPlayer = 5;
-    uint[shipsPerPlayer] public boardShips = [5, 4, 3, 3, 2];    
-    uint constant shipSpaces = 5 + 4 + 3 + 3 + 2;
+    uint constant shipsPerPlayer = 2;
+    uint[shipsPerPlayer] public boardShips = [3, 2];    
+    uint constant shipSpaces = 3 + 2;
     
     struct Ship {
         uint width;
@@ -36,7 +36,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
     }
 
     struct PlayerInfo {
-        uint betAmount;
+        uint deposit;
         bytes32[shipsPerPlayer] hiddenShips;
         Ship[shipsPerPlayer] revealShips;   
         Move[boardWidth * boardHeight] moves;
@@ -76,7 +76,8 @@ contract Battleship is Ownable, Pausable, PullPayment {
     
     address public player1;
     address public player2;
-    uint betAmount;
+    uint public betAmount;
+    bool winningsProcessed = false;
     
     mapping (address => PlayerInfo) public players;
 
@@ -117,14 +118,21 @@ contract Battleship is Ownable, Pausable, PullPayment {
         uint shipNumber
     );
 
+    event DepositMade (
+        address indexed _from,
+        uint indexed amount,
+        uint indexed refund
+    );
+
     event Logs (
         address indexed _from,
         string _data
     );
     
-    constructor() public {    
+    constructor(uint _betAmount) public {    
         gameState = GameState.Created;
         createdAt = getTimestamp();
+        betAmount = _betAmount;
     }
 
     // ***************************
@@ -195,7 +203,28 @@ contract Battleship is Ownable, Pausable, PullPayment {
             gameState = GameState.PlayersJoined;
             emit StateChanged(msg.sender, gameState);
         }
-    } 
+    }
+
+    // **************
+    // * Place Bets *
+    // **************
+    function depositBet() public payable onlyPlayers returns (uint) {
+        require(gameState == GameState.Created || gameState == GameState.PlayersJoined, "Game must not have started");
+        uint deposit = players[msg.sender].deposit;
+        uint refund = 0;
+        deposit = deposit.add(msg.value);
+        if (deposit > betAmount) {
+            refund = deposit.sub(betAmount);
+            asyncSend(msg.sender, refund);
+        }
+        players[msg.sender].deposit = deposit;
+        emit DepositMade(msg.sender, msg.value, refund);
+        return players[msg.sender].deposit;
+    }
+
+    function getDepositForPlayer(address player) public view returns (uint) {
+        return players[player].deposit;
+    }
 
     // ****************
     // * Submit Ships *
@@ -207,7 +236,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
 
     function submitHiddenShip(uint shipNumber, bytes32 commitHash) public onlyPlayers {
         require(gameState == GameState.Created || gameState == GameState.PlayersJoined, "Game must not have started");
-        require(betAmount == 0 || players[msg.sender].betAmount >= betAmount, "Can only place ships if game is a no-bet game or bet has been placed");
+        require(betAmount == 0 || players[msg.sender].deposit >= betAmount, "Can only place ships if game is a no-bet game or bet has been placed");
         require(shipNumber >=0 && shipNumber < shipsPerPlayer, "Ship number must be in range");
         require(getHiddenShipsCountForPlayer(msg.sender) < shipsPerPlayer, "Cannot resubmit if all ships submitted");
 
@@ -532,12 +561,14 @@ contract Battleship is Ownable, Pausable, PullPayment {
                 gameState = GameState.Ended;
                 gameEndState = GameEndState.Draw;
                 emit StateChanged(msg.sender, gameState);
+                processWinnings();
             }
         } else if (gameState == GameState.Started) {
             if (getTimestamp() > startedAt.add(24 * 60 * 60)) {
                 gameState = GameState.Ended;
                 gameEndState = GameEndState.Draw;
                 emit StateChanged(msg.sender, gameState);
+                processWinnings();
             }
         } else if (gameState == GameState.Finished) { // not GameState.ShipsRevealed
             if (getTimestamp() > finishedAt.add(24 * 60 * 60)) {
@@ -559,11 +590,13 @@ contract Battleship is Ownable, Pausable, PullPayment {
                     gameEndState = GameEndState.Draw;
                 }
                 emit StateChanged(msg.sender, gameState);
+                processWinnings();
             }
         } else if (gameState == GameState.ShipsRevealed) {
             gameEndState = checkWinnerWhenBothPlayersRevealedShips();
             gameState = GameState.Ended;
             emit StateChanged(msg.sender, gameState);
+            processWinnings();
         } else {
             // Game has ended, do nothing
         }
@@ -617,6 +650,34 @@ contract Battleship is Ownable, Pausable, PullPayment {
             }
         }
 
+    }
+
+    function processWinnings() private {
+        require(winningsProcessed == false, "Can only process winnings once");
+        require(gameState == GameState.Ended, "Game must have ended");
+        require(gameEndState != GameEndState.Unknown, "The game end state must not be unknown");
+
+        uint totalPrize = betAmount.add(betAmount);
+        uint losingPrize = totalPrize.div(10); 
+        // because division rounds down, we calculate the losing prize first
+        // this is so that the winning prize will always be the "rounded up" portion and be bigger 
+        // than the losing prize if the bet amounts are really small
+        uint winningPrize = totalPrize.sub(losingPrize);       
+
+        if (gameEndState == GameEndState.Draw) {
+            asyncSend(player1, betAmount);
+            asyncSend(player2, betAmount);
+        } else if (gameEndState == GameEndState.Player1WinsInvalidGame) {
+            asyncSend(player1, totalPrize);
+        } else if (gameEndState == GameEndState.Player2WinsInvalidGame) {
+            asyncSend(player2, totalPrize);
+        } else if (gameEndState == GameEndState.Player1WinsValidGame) {
+            asyncSend(player1, winningPrize);
+            asyncSend(player2, losingPrize);
+        } else if (gameEndState == GameEndState.Player2WinsValidGame) {
+            asyncSend(player1, losingPrize);
+            asyncSend(player2, winningPrize);
+        }
     }
     
 }

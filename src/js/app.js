@@ -120,7 +120,9 @@ window.addEventListener('load', () => {
       playerGames: {},
       openGames: {},
       newGameOpponent: "",
+      newGameBetAmount: 0,
       moment: window.moment,
+      web3: window.web3,
     },
 
     created: function () {
@@ -225,6 +227,9 @@ window.addEventListener('load', () => {
               battleshipInstance.finishedAt.call().then(val => {
                 this.$set(this.playerGames[gameAddress], 'finishedAt', val);
               });
+              battleshipInstance.betAmount.call().then(val => {
+                this.$set(this.playerGames[gameAddress], 'betAmount', val);
+              });
             };
             closure();
 
@@ -281,6 +286,9 @@ window.addEventListener('load', () => {
               battleshipInstance.finishedAt.call().then(val => {
                 this.$set(this.openGames[gameAddress], 'finishedAt', val);
               });
+              battleshipInstance.betAmount.call().then(val => {
+                this.$set(this.openGames[gameAddress], 'betAmount', val);
+              });
             };
             closure();
 
@@ -297,12 +305,12 @@ window.addEventListener('load', () => {
 
           if (this.newGameOpponent) {
 
-            return lobbyInstance.createGameWithOpponent(this.newGameOpponent, { from: this.account });
+            return lobbyInstance.createGameWithOpponent(this.newGameOpponent, this.newGameBetAmount, { from: this.account });
 
           } else {
 
             // Execute adopt as a transaction by sending account
-            return lobbyInstance.createOpenGame({ from: this.account });
+            return lobbyInstance.createOpenGame(this.newGameBetAmount, { from: this.account });
           }
         }).then(result => {
           return this.getGames();
@@ -351,6 +359,7 @@ window.addEventListener('load', () => {
       boardWidth: 0,
       boardHeight: 0,
       boardShips: [],
+      betAmount: 0,
       addShips: {
         board: [],
         rotation: "horizontal"
@@ -359,13 +368,14 @@ window.addEventListener('load', () => {
       myPlayerInfo: {
         hiddenShips: [],
         revealShips: [],
-        moves: []
+        moves: [],
+        deposit: 0,
       },
       opponent: "",
       opponentPlayerInfo: {
         hiddenShips: [],
         revealShips: [],
-        moves: []        
+        moves: [] 
       },
       myShips: [],
       whoseTurn: "",
@@ -440,6 +450,12 @@ window.addEventListener('load', () => {
             this.updatePlayerInfoFromChain();
           }
         });
+        // Get move added event
+        var depositMadeEvent = battleshipInstance.DepositMade({}, {}, (error, result) => {
+          if (!error) {
+            this.updatePlayerInfoFromChain();
+          }
+        });
 
         // Updates game and player info
         this.updateGameInfoFromChain();
@@ -461,6 +477,10 @@ window.addEventListener('load', () => {
         }).then(val => {
           console.log("game-boardShips", this.gameAddress, val, val.toString());
           this.boardShips = val.map(x => x.toNumber());
+        });
+
+        battleshipInstance.betAmount.call().then(val => {
+          this.betAmount = val;
         });
       },
 
@@ -487,6 +507,11 @@ window.addEventListener('load', () => {
 
       updatePlayerInfoFromChain: function () {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+
+        // Get hidden ships
+        var getDeposit = battleshipInstance.getDepositForPlayer.call(this.account).then(val => {
+          this.$set(this.myPlayerInfo, 'deposit', val);
+        });
 
         // Get opponent
         var getOpponentMovesPromise = battleshipInstance.getOpponentAddress.call().then(val => {
@@ -615,6 +640,11 @@ window.addEventListener('load', () => {
           console.log("Updated Moves!", val);
           this.waitingForMovesUpdate = false;
         });
+      },
+
+      depositBet: function () {
+        var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+        battleshipInstance.depositBet({from: this.account, value: this.betAmount});
       },
 
       addShipResetHighlightPlacement: function () {
@@ -831,7 +861,7 @@ window.addEventListener('load', () => {
 
         console.log(packedShips.width, packedShips.height, packedShips.x, packedShips.y, packedShips.nonce);
         battleshipInstance.revealShipsPacked(packedShips.width, packedShips.height, packedShips.x, packedShips.y, packedShips.nonce, { from: this.account }).then(response => {
-          console.log("tried to declare game finished");
+          console.log("tried to reveal ships");
           this.waitingForMovesUpdate = true;
         });
       },
