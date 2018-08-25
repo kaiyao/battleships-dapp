@@ -34,6 +34,7 @@ Troubleshooting:
 - Sometimes, the first time the page loads in Chrome, there is some Metamask issues (which you can see in the Chrome developer console). Just try to refresh the page and it should work the 2nd time.
 - If there is any issues with the page, try to refresh the page.
 - This app uses localstorage to store the positions of the ships before they are revealed at the end of the game. If you are using some browser/plugins that block localstorage, this can be an issue (e.g. Brave browser seems to not work).
+- The final withdrawal of winnings/refunds seems to require more gas that what MetaMask estimates by default which causes the transaction to fail (it says revert in the Chrome developer console). You need to set this gas value manually.
 
 Tests
 =====
