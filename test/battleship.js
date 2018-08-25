@@ -500,12 +500,14 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
     let getShipsPackedForm = function(ships) {
         let packedShips = {width: [], height: [], x: [], y: [], nonce: []};
         for (let i = 0; i < ships.length; i++) {
-            packedShips.width = ships[i].width;
-            packedShips.height = ships[i].height;
-            packedShips.x = ships[i].x;
-            packedShips.y = ships[i].y;
-            packedShips.nonce = ships[i].nonce;
+            packedShips.width.push(ships[i].width);
+            packedShips.height.push(ships[i].height);
+            packedShips.x.push(ships[i].x);
+            packedShips.y.push(ships[i].y);
+            packedShips.nonce.push(ships[i].nonce);
         }
+
+        return packedShips;
     }
 
     beforeEach(async () => {
@@ -586,21 +588,31 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
         await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
 
+        assert.equal(await instance.gameState(), GAMESTATE_STARTED, "game state should be STARTED");
+
         // Declare game finished
-        await instance.tryToDeclareGameFinished();
+        await instance.tryToDeclareGameFinished({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED");
 
         // Both players reveal their ships
         let shipsPacked = getShipsPackedForm(ships);
+        //console.log(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce']);
         await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: alice});
         await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: bob});
 
-        await tryToDeclareGameTimeoutOrEnded();
+        assert.equal(await instance.gameState(), GAMESTATE_SHIPSREVEALED, "game state should be SHIPSREVEALED");
 
-        let endState = await instance.gameEndState();
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        let endState = await instance.gameEndState({from: alice});
         assert.equal(endState.toNumber(), GameEndState_Player1WinsValidGame, "alice wins because she sunk all the ships first");
         
     });
 
+    /*
     it("should determine winner correctly (player 2 wins)", async () => {
         let instance = contract;
 

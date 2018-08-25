@@ -508,7 +508,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
 
     }
 
-    function tryToDeclareGameTimeoutOrEnded() public {
+    function tryToDeclareGameTimeoutOrEnded() public onlyPlayers {
         if (gameState == GameState.Created || gameState == GameState.PlayersJoined) {
             if (getTimestamp() > createdAt + 24 * 60 * 60) {
                 gameState = GameState.Ended;
