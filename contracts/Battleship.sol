@@ -19,11 +19,6 @@ contract Battleship is Ownable, Pausable, PullPayment {
         uint x;
         uint y;
     }
-
-    struct ShipHidden {
-        bytes32 commitHash;
-        bytes32 commitNonceHash;
-    }
     
     enum MoveResult { Unknown, Miss, Hit }
     
@@ -39,15 +34,11 @@ contract Battleship is Ownable, Pausable, PullPayment {
     }
 
     struct PlayerInfo {
-        address player;
-        Ship[shipsPerPlayer] revealShips;
-        uint revealShipsCount;
-        ShipHidden[shipsPerPlayer] hiddenShips;
-        uint hiddenShipsCount;
+        uint betAmount;
+        bytes32[shipsPerPlayer] hiddenShips;
+        Ship[shipsPerPlayer] revealShips;   
         Move[boardWidth * boardHeight] moves;
         uint movesCount;
-        uint hitCount;
-        uint[shipsPerPlayer] perShipHitCount;
     }
     
     /*
@@ -83,12 +74,24 @@ contract Battleship is Ownable, Pausable, PullPayment {
     
     address public player1;
     address public player2;
+    uint betAmount;
     
     mapping (address => PlayerInfo) public players;
-    uint playerCount;
 
     bool public testMode;
     uint public testModeTimestamp;
+
+    modifier onlyPlayers()
+    {
+        require(
+            msg.sender == player1 || msg.sender == player2,
+            "Only players."
+        );
+        // Do not forget the "_;"! It will
+        // be replaced by the actual function
+        // body when the modifier is used.
+        _;
+    }
 
     event StateChanged (
         address indexed _from,
@@ -128,11 +131,14 @@ contract Battleship is Ownable, Pausable, PullPayment {
     function getBoardShips() public view returns (uint[shipsPerPlayer]) {
         return boardShips;
     }
+        
+    function joinGame() public {
+        joinGameForPlayer(msg.sender);
+    }
 
-    function joinPlayer(address newPlayer) public {
+    function joinGameForPlayer(address newPlayer) public {
         require(gameState == GameState.Created);
         require(newPlayer != player1 && newPlayer != player2);
-        players[newPlayer].player = newPlayer;
 
         if (player1 == 0) {
             player1 = newPlayer;
@@ -140,27 +146,23 @@ contract Battleship is Ownable, Pausable, PullPayment {
             player2 = newPlayer;
         }
 
-        playerCount++;
-        if (playerCount == 2) {
+        if (player1 != 0 && player2 != 0) {
             gameState = GameState.PlayersJoined;
             emit StateChanged(msg.sender, gameState);
         }
     } 
-    
-    function joinMyself() public {
-        joinPlayer(msg.sender);
-    }
+
 
     function getOpponentAddress() public view returns (address) {
-        require(msg.sender == player1 || msg.sender == player2);
-        require(player1 != 0 && player2 != 0);
         return getOpponentAddressForPlayer(msg.sender);
     }
 
     function getOpponentAddressForPlayer(address player) public view returns (address) {
+        require(player == player1 || player == player2);
+        require(player1 != 0 && player2 != 0);
         if (player1 == player) {
             return player2;
-        } else {            
+        } else {
             return player1;
         }
     }
@@ -175,12 +177,12 @@ contract Battleship is Ownable, Pausable, PullPayment {
         return calculatedCommitNonceHash;
     }
 
-    function submitHiddenShip(uint shipNumber, bytes32 commitHash, bytes32 commitNonceHash) public {
-        require(gameState == GameState.Created || gameState == GameState.PlayersJoined);
-        require(shipNumber >=0 && shipNumber < shipsPerPlayer);
-        require(msg.sender == player1 || msg.sender == player2);
+    function submitHiddenShip(uint shipNumber, bytes32 commitHash) public onlyPlayers {
+        require(gameState == GameState.Created || gameState == GameState.PlayersJoined, "Game must not have started");
+        require(betAmount == 0 || players[msg.sender].betAmount >= betAmount, "Can only place ships if game is a no-bet game or bet has been placed");
+        require(shipNumber >=0 && shipNumber < shipsPerPlayer, "Ship number must be in range");
 
-        players[msg.sender].hiddenShips[shipNumber] = ShipHidden(commitHash, commitNonceHash);
+        players[msg.sender].hiddenShips[shipNumber] = commitHash;
         if (checkAllHiddenShipsSubmitted()) {
             gameState = GameState.Started;
             startedAt = getTimestamp();
@@ -190,39 +192,29 @@ contract Battleship is Ownable, Pausable, PullPayment {
 
     /** @dev Submits hidden ships (the commit for the ship positions) in a batch
       * @param commitHashes An array of the hashes for the ship commits. Index 0 = ship 0, index 1 = ship 1, etc.
-      * @param commitNonceHashes An array of the hash of the nonces
       */
-    function submitHiddenShipsPacked(bytes32[shipsPerPlayer] commitHashes, bytes32[shipsPerPlayer] commitNonceHashes) public {
+    function submitHiddenShipsPacked(bytes32[shipsPerPlayer] commitHashes) public onlyPlayers {
         for (uint i = 0; i < shipsPerPlayer; i++) {
-            bytes32 commitHash = commitHashes[i];
-            bytes32 commitNonceHash = commitNonceHashes[i];
-            submitHiddenShip(i, commitHash, commitNonceHash);
+            submitHiddenShip(i, commitHashes[i]);
         }
     }
     
-    function getHiddenShipsPacked() public view returns (bytes32[shipsPerPlayer], bytes32[shipsPerPlayer]) {
-        bytes32[shipsPerPlayer] memory commitHashes;
-        bytes32[shipsPerPlayer] memory commitNonceHashes;
-        for (uint i = 0; i < shipsPerPlayer; i++) {
-            ShipHidden storage ship = players[msg.sender].hiddenShips[i];
-            commitHashes[i] = ship.commitHash;
-            commitNonceHashes[i] = ship.commitNonceHash;
-        }
-        return (commitHashes, commitNonceHashes);
+    function getHiddenShipsPackedForPlayer(address player) public view returns (bytes32[shipsPerPlayer]) {
+        return players[player].hiddenShips;
     }
 
-    function checkAllHiddenShipsSubmitted() private view returns (bool) {
-        uint player1Ships = 0;
-        uint player2Ships = 0;
+    function getHiddenShipsCountForPlayer(address player) public view returns (uint) {
+        uint shipsSubmitted = 0;
         for (uint i = 0; i < shipsPerPlayer; i++) {
-            if (players[player1].hiddenShips[i].commitHash != "" && players[player1].hiddenShips[i].commitNonceHash != "") {
-                player1Ships++;
-            }
-            if (players[player2].hiddenShips[i].commitHash != "" && players[player2].hiddenShips[i].commitNonceHash != "") {
-                player2Ships++;
+            if (players[player].hiddenShips[i] != "") {
+                shipsSubmitted++;
             }
         }
-        if (player1Ships >= shipsPerPlayer && player2Ships >= shipsPerPlayer) {
+        return shipsSubmitted;
+    }
+
+    function checkAllHiddenShipsSubmitted() public view returns (bool) {
+        if (getHiddenShipsCountForPlayer(player1) >= shipsPerPlayer && getHiddenShipsCountForPlayer(player2) >= shipsPerPlayer) {
             return true;
         } else {
             return false;
@@ -241,9 +233,8 @@ contract Battleship is Ownable, Pausable, PullPayment {
         }
     }
     
-    function makeMove(uint x, uint y) public {
+    function makeMove(uint x, uint y) public onlyPlayers {
         require(gameState == GameState.Started || gameState == GameState.Finished, "Game must be started");
-        require(msg.sender == player1 || msg.sender == player2, "Sender must be player");
         
         // Check that it is the player's turn
         require(msg.sender == getWhoseTurn(), "Must be player's turn");
@@ -254,31 +245,11 @@ contract Battleship is Ownable, Pausable, PullPayment {
             (msg.sender == player2 && players[player1].moves[players[player1].movesCount - 1].result != MoveResult.Unknown),
             "Must have submitted move result"
         );
-        // Check that player has already revealed ship if a ship has been hit
-        // We put this here (instead of the update function) so that we can reveal after the hit is recorded
-        require(checkAllSunkShipsRevealed(), "player must reveal ship if hit");
         
         players[msg.sender].moves[players[msg.sender].movesCount] = Move(x, y, MoveResult.Unknown, 0);
         players[msg.sender].movesCount++;
 
         emit MoveMade(msg.sender, x, y);
-    }
-
-    // Checks that all the ships that the opponent has hit and sunk the player with, the player has revealed them
-    function checkAllSunkShipsRevealed() public view returns (bool) {
-        address player = msg.sender;
-        address opponent = getOpponentAddress();
-        for (uint shipNumber = 0; shipNumber < shipsPerPlayer; shipNumber++) {
-            if (players[opponent].perShipHitCount[shipNumber] >= boardShips[shipNumber]) {
-                // Ship has been sunk
-                if (players[player].revealShips[shipNumber].width != 0 && players[player].revealShips[shipNumber].height != 0) {
-                    // okay, ship has been revealed
-                } else {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 
     function getPlayerMovesPacked(address player) public view returns (uint[boardWidth * boardHeight], uint[boardWidth * boardHeight], MoveResult[boardWidth * boardHeight], uint[boardWidth * boardHeight]) {
@@ -305,49 +276,51 @@ contract Battleship is Ownable, Pausable, PullPayment {
         return (move.x, move.y, move.result, move.shipNumber);
     }
     
-    function updateLastOpponentMoveWithResult(MoveResult result, uint shipNumber) public {
+    function updateLastOpponentMoveWithResult(MoveResult result, uint shipNumber) public onlyPlayers {
         require(gameState == GameState.Started, "Game must be started");
-        require(msg.sender == player1 || msg.sender == player2, "Sender must be player");
         require(result == MoveResult.Hit || result == MoveResult.Miss, "Result must be Hit or Miss, not unknown");
         require(result == MoveResult.Miss || (shipNumber >= 0 && shipNumber < shipsPerPlayer), "Result must be miss or shipnumber");
         
-        address opponent = getOpponentAddress();
+        address opponent = getOpponentAddressForPlayer(msg.sender);
         uint opponentMoveCount = players[opponent].movesCount;
         //require(players[opponent].moves[opponentMoveCount - 1].result == MoveResult.Unknown);
 
         players[opponent].moves[opponentMoveCount - 1].result = result;
         if (result == MoveResult.Hit) {
             players[opponent].moves[opponentMoveCount - 1].shipNumber = shipNumber;
-            players[opponent].hitCount++;
-            players[opponent].perShipHitCount[shipNumber]++;
         }
 
         emit MoveUpdated(msg.sender, result, shipNumber);
-
-        if (players[opponent].hitCount >= shipSpaces) {
-            // opponent has won!
-            setGameFinished();
-        }
     }
 
-    function makeMoveAndUpdateLastMoveWithResult(uint x, uint y, MoveResult result, uint shipNumber) public {
+    function makeMoveAndUpdateLastMoveWithResult(uint x, uint y, MoveResult result, uint shipNumber) public onlyPlayers {
         emit Logs(msg.sender, "Updating last opponent move 2");
         updateLastOpponentMoveWithResult(result, shipNumber);
         emit Logs(msg.sender, "Make move 2");
         makeMove(x, y);
     }
 
-    function makeMoveAndUpdateLastMoveWithResultAndRevealShip(uint x, uint y, MoveResult result, uint shipNumber, uint shipWidth, uint shipHeight, uint shipX, uint shipY, bytes32 nonce) public {
-        emit Logs(msg.sender, "Updating last opponent move 3");
-        updateLastOpponentMoveWithResult(result, shipNumber);
-        emit Logs(msg.sender, "Revealing ship 3");
-        revealShip(shipNumber, shipWidth, shipHeight, shipX, shipY, nonce);
-        emit Logs(msg.sender, "Make move 3");
-        makeMove(x, y);
+    function getHitCountForPlayer(address player) public view returns (uint) {
+        uint hitCount = 0;
+        for(uint i = 0; i < players[player].movesCount; i++) {
+            if (players[player].moves[i].result == MoveResult.Hit) {
+                hitCount++;
+            }
+        }
+        return hitCount;
     }
+        
+    function tryToDeclareGameFinished() public onlyPlayers {
+        require(gameState == GameState.Started);
+        // can only declare game finished if one player's hitCount >= shipSpaces
+        require(getHitCountForPlayer(player1) >= shipSpaces || getHitCountForPlayer(player2) >= shipSpaces);
+        gameState = GameState.Finished;
+        finishedAt = getTimestamp();
+        emit StateChanged(msg.sender, gameState);
+    }
+
     
-    function revealShip(uint shipNumber, uint width, uint height, uint x, uint y, bytes32 nonce) public {
-        require(msg.sender == player1 || msg.sender == player2, "Must be player to reveal ship");
+    function revealShip(uint shipNumber, uint width, uint height, uint x, uint y, bytes32 nonce) public onlyPlayers {
         require(shipNumber >= 0 && shipNumber < shipsPerPlayer, "Ship number must be within range");
         require(width == 1 || height == 1, "Width or height must be 1, the ship cannot be wider");
         require(x + width < boardWidth, "X coordinate cannot place ship outside of board");
@@ -369,15 +342,6 @@ contract Battleship is Ownable, Pausable, PullPayment {
             emit StateChanged(msg.sender, gameState);
         }
     }
-        
-    function setGameFinished() private {
-        require(gameState == GameState.Started);
-        require(players[player1].hitCount >= shipSpaces || players[player2].hitCount >= shipSpaces);
-        gameState = GameState.Finished;
-        finishedAt = getTimestamp();
-        emit StateChanged(msg.sender, gameState);
-    }
-
 
     function checkAllShipsRevealed() public view returns (bool) {
         return (checkPlayerShipsRevealed(player1) && checkPlayerShipsRevealed(player2));
@@ -472,7 +436,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
 
     }
 
-    function gameFinishedOrTimeoutAction() public {
+    function tryToDeclareGameTimeoutOrEnded() public {
         if (gameState == GameState.Created || gameState == GameState.PlayersJoined) {
             if (getTimestamp() > createdAt + 24 * 60 * 60) {
                 gameState = GameState.Ended;
@@ -515,7 +479,17 @@ contract Battleship is Ownable, Pausable, PullPayment {
         require(gameState == GameState.ShipsRevealed, "Function can only be called when both players already revealed ships");
 
         // Check both players have valid ship placement
-        // Skip this because we already check when revealing ship. You cannot reveal a ship successfully if it is invalid
+        bool player1ShipsPlacementValid = isShipPlacementSaneForPlayer(player1);
+        bool player2ShipsPlacementValid = isShipPlacementSaneForPlayer(player2);
+        if (player1ShipsPlacementValid && player2ShipsPlacementValid) {
+            // continue checks
+        } else if (player1ShipsPlacementValid && !player2ShipsPlacementValid) {
+            return GameEndState.Player1WinsInvalidGame;
+        } else if (!player1ShipsPlacementValid && player2ShipsPlacementValid) {
+            return GameEndState.Player2WinsInvalidGame;
+        } else {
+            return GameEndState.Draw;
+        }
 
         // Check both players have reported their ships correctly
         bool player1MovesReportedCorrectly = isMovesReportedCorrectlyForPlayer(player1);
