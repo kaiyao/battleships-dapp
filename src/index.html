@@ -91,15 +91,15 @@
                         <tr>
                             <th>ID</th>
                             <th>Game State</th>
-                            <th>Started At</th>
+                            <th>Created At</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(game, id) in playerGames">
                             <td>{{ id }}</td>
-                            <td>{{ game.state }}</td>
-                            <td>{{ game.startedAt }}</td>
+                            <td>{{ getGameStateString(game.state) }}</td>
+                            <td>{{ moment.unix(game.createdAt).format("YYYY-MM-DD h:mm:ss A Z") }}</td>
                             <td><a :href="'#' + id">Enter Game</a></td>
                         </tr>
                     </tbody>
@@ -116,6 +116,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Opponent</th>
+                            <th>Created At</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -123,6 +124,7 @@
                         <tr v-for="(game, id) in openGames">
                             <td>{{ id }}</td>
                             <td>{{ game.player1 }}</td>
+                            <td>{{ moment.unix(game.createdAt).format("YYYY-MM-DD h:mm:ss A Z") }}</td>
                             <td v-if="game.player1 == account">Your Game</td>
                             <td v-else><a href="#" v-on:click.prevent="joinOpenGame(game.gameId)">Join Game</a></td>
                         </tr>
@@ -151,49 +153,42 @@
 
         <div class="row">
             <div class="col-xs-12">
-                <p><a href="#lobby">Back to Lobby</a></p>
+                <p><a href="#lobby">&larr; Back to Lobby</a></p>
             </div>
         </div>
 
         <div class="row">
-            <div class="col-xs-8">
-                <p v-if="getGameStateString == 'Created'">
-                    Curret game state: created<br> 
-                    You can place your ships now, but you need to wait for another player to join to start the game.<br>
-                    Waited too long? If it has already been 24 hours since you created the game, you can end the game.
-                </p>
-                <p v-if="getGameStateString == 'PlayersJoined'">
-                    Curret game state: players joined<br>
-                    An opponent has joined the game. Place your ships to start the game. <br>
-                    If you have already placed your ships, wait for your opponent to do so. <br>
-                    Waited too long? If it has already been 24 hours since the other player joined, you can request to end the game.
-                </p>
-                <p v-if="getGameStateString == 'Started'">
-                    Curret game state: started!<br>
-                    The game has started. Take turns to make shots at each other. <br>
-                    If your opponent is not participating and it has already been 24 hours since the game started, you can request to end the game.
-                </p>
-                <p v-if="getGameStateString == 'Finished'">
-                    Curret game state: finished!<br>
-                    Looks like someone has won! To confirm, you will need to reveal your ships.<br>
-                    <input type="button" class="btn btn-default" value="Reveal ships"> <br>
-                    If it has already been 24 hours since the game finished and your opponent has not revealed his/her ships, you can request to end the game.
-                </p>
-                <p v-if="getGameStateString == 'ShipsRevealed'">
-                    Curret game state: ships revealed!<br>
-                    Both you and your opponent have revealed their ships.<br>
-                    Now you can end the game to determine the winner.
-                </p>
-                <p v-if="getGameStateString == 'Ended'">
-                    Curret game state: ended!<br>
-                    The game has ended. You can claim your prize/refund.
-                </p>
-            </div>
-            <div class="col-xs-4">
-                <div class="pull-right">
-                    <input v-if="getGameStateString != 'Ended'" type="button" class="btn btn-default" value="End Game">
-                    <input v-if="getGameStateString == 'Ended'" type="button" class="btn btn-default" value="Claim Prize/Refund">
-                </div>
+            <div class="col-xs-12">
+                <template v-if="getGameStateString == 'Created'">
+                    <p>Current game state: Created ({{ moment.unix(createdAt).fromNow() }}, {{ moment.unix(createdAt).format("YYYY-MM-DD h:mm:ss A Z") }})</p>
+                    <p>You can place your ships now, but you need to wait for another player to join to start the game.</p>
+                    <p>Waited too long? If it has already been 24 hours since you created the game, you can end the game.</p>                    
+                </template>
+                <template v-if="getGameStateString == 'PlayersJoined'">
+                    <p>Current game state: Players Joined (created {{ moment.unix(createdAt).fromNow() }}, {{ moment.unix(createdAt).format("YYYY-MM-DD h:mm:ss A Z") }})<br>
+                    <p>There are two players in the game. Place your ships to start the game.</p>
+                    <p>If you have already placed your ships, wait for your opponent to do so.</p>
+                    <p>Waited too long? If it has already been 24 hours since the other player joined, you can request to end the game.</p>
+                </template>
+                <template v-if="getGameStateString == 'Started'">
+                    <p>Current game state: Started ({{ moment.unix(startedAt).fromNow() }}, {{ moment.unix(startedAt).format("YYYY-MM-DD h:mm:ss A Z") }})</p>
+                    <p>The game has started. Take turns to make shots at each other.</p>
+                    <p>If your opponent is not participating and it has already been 24 hours since the game started, you can request to end the game.</p>
+                </template>
+                <template v-if="getGameStateString == 'Finished'">
+                    <p>Current game state: Finished ({{ moment.unix(finishedAt).fromNow() }}, {{ moment.unix(finishedAt).format("YYYY-MM-DD h:mm:ss A Z") }})</p>
+                    <p>The game has finished. To proceed, you will need to reveal your ships.</p>
+                    <p>If it has already been 24 hours since the game finished and your opponent has not revealed his/her ships, you can request to end the game.</p>
+                </template>
+                <template v-if="getGameStateString == 'ShipsRevealed'">
+                    <p>Current game state: Ships Revealed</p>
+                    <p>Both you and your opponent have revealed their ships.</p>
+                    <p>Now you can end the game to determine the winner.</p>
+                </template>
+                <template v-if="getGameStateString == 'Ended'">
+                    <p>Current game state: Ended</p>
+                </template>
+                <p><input v-if="getGameStateString != 'Ended'" type="button" class="btn btn-default" v-on:click="tryToDeclareGameTimeoutOrEnded" value="Request to End Game"></p>
             </div>
         </div>
 
@@ -321,6 +316,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/web3@0.20.7/dist/web3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/truffle-contract@3.0.6/dist/truffle-contract.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js" integrity="sha256-3kjowa0CUPPK4W+yaGpNP1exjs8gbX2SSsToEMd06K8="

@@ -120,6 +120,7 @@ window.addEventListener('load', () => {
       playerGames: {},
       openGames: {},
       newGameOpponent: "",
+      moment: window.moment,
     },
 
     created: function () {
@@ -269,16 +270,16 @@ window.addEventListener('load', () => {
               });
               battleshipInstance.gameEndState.call().then(val => {
                 console.log("battleshipGes", gameAddress, val);
-                this.$set(this.playerGames[gameAddress], 'endState', val);
+                this.$set(this.openGames[gameAddress], 'endState', val);
               });
               battleshipInstance.createdAt.call().then(val => {
-                this.$set(this.playerGames[gameAddress], 'createdAt', val);
+                this.$set(this.openGames[gameAddress], 'createdAt', val);
               });
               battleshipInstance.startedAt.call().then(val => {
-                this.$set(this.playerGames[gameAddress], 'startedAt', val);
+                this.$set(this.openGames[gameAddress], 'startedAt', val);
               });
               battleshipInstance.finishedAt.call().then(val => {
-                this.$set(this.playerGames[gameAddress], 'finishedAt', val);
+                this.$set(this.openGames[gameAddress], 'finishedAt', val);
               });
             };
             closure();
@@ -327,13 +328,13 @@ window.addEventListener('load', () => {
         game.gameAddress = gameAddress;
       },
 
-      getGameStateString: function () {
+      getGameStateString: function (number) {
         let gameStateMapping = ['Created', 'PlayersJoined', 'Started', 'Finished', 'ShipsRevealed', 'Ended'];
-        return gameStateMapping[this.gameState];
+        return gameStateMapping[number];
       },
       getGameEndStateString: function () {
         let gameEndStateMapping = ['Unknown', 'Draw', 'Player1WinsValidGame', 'Player2WinsValidGame', 'Player1WinsInvalidGame', 'Player2WinsInvalidGame'];
-        return gameEndStateMapping[this.gameEndState];
+        return gameEndStateMapping[number];
       }
 
     },
@@ -369,6 +370,10 @@ window.addEventListener('load', () => {
       myShips: [],
       whoseTurn: "",
       waitingForMovesUpdate: false,
+      createdAt: 0,
+      startedAt: 0,
+      finishedAt: 0,
+      moment: window.moment,
     },
     created: function () {
 
@@ -419,18 +424,10 @@ window.addEventListener('load', () => {
         // Get current Game State and subscribe to game state changed events
         var stateChangedEvent = battleshipInstance.StateChanged({}, {}, (error, result) => {
           if (!error) {
-            battleshipInstance.gameState.call().then(val => {
-              this.gameState = val.toNumber();
-            });
-            battleshipInstance.gameEndState.call().then(val => {
-              this.gameEndState = val.toNumber();
-            });
-            console.log(result);
-            this.updatePlayerInfoFromChain();
+            this.updateGameInfoFromChain();
           }
         });
 
-        this.updatePlayerInfoFromChain();
         // Get move added event
         var moveMadeEvent = battleshipInstance.MoveMade({}, {}, (error, result) => {
           if (!error) {
@@ -444,12 +441,8 @@ window.addEventListener('load', () => {
           }
         });
 
-        battleshipInstance.gameState.call().then(val => {
-          this.gameState = val.toNumber();
-        });
-        battleshipInstance.gameEndState.call().then(val => {
-          this.gameEndState = val.toNumber();
-        });
+        // Updates game and player info
+        this.updateGameInfoFromChain();
         
         battleshipInstance.player1.call().then(val => {
           console.log("game-player1", this.gameAddress, val, val.toString());
@@ -469,6 +462,27 @@ window.addEventListener('load', () => {
           console.log("game-boardShips", this.gameAddress, val, val.toString());
           this.boardShips = val.map(x => x.toNumber());
         });
+      },
+
+      updateGameInfoFromChain: function () {
+        var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
+
+        battleshipInstance.gameState.call().then(val => {
+          this.gameState = val.toNumber();
+        });
+        battleshipInstance.gameEndState.call().then(val => {
+          this.gameEndState = val.toNumber();
+        });
+        battleshipInstance.createdAt.call().then(val => {
+          this.createdAt = val.toNumber();
+        });
+        battleshipInstance.startedAt.call().then(val => {
+          this.startedAt = val.toNumber();
+        });
+        battleshipInstance.finishedAt.call().then(val => {
+          this.finishedAt = val.toNumber();
+        });
+        this.updatePlayerInfoFromChain();
       },
 
       updatePlayerInfoFromChain: function () {
