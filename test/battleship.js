@@ -31,6 +31,7 @@ function convertMoveResultToNumber(moveResult) {
     return moveResultEnum[moveResult];
 };
 
+
 contract('Game startup', async (accounts) => {
     const owner = accounts[0];
     const alice = accounts[1];
@@ -322,7 +323,7 @@ contract('Game make shots ' + assumptionsReminder, async (accounts) => {
     });
 });
 
-contract('Game test function test', async(accounts) => {
+contract('Game test batch add ships and batch move test functions', async(accounts) => {
 
     const owner = accounts[0];
     const alice = accounts[1];
@@ -607,12 +608,11 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
 
         assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
 
-        let endState = await instance.gameEndState({from: alice});
+        let endState = await instance.gameEndState();
         assert.equal(endState.toNumber(), GameEndState_Player1WinsValidGame, "alice wins because she sunk all the ships first");
         
     });
 
-    /*
     it("should determine winner correctly (player 2 wins)", async () => {
         let instance = contract;
 
@@ -621,14 +621,28 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Miss'), 0, {from: bob});
         await instance.makeMoveAndUpdateLastMoveWithResult(6, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
         await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Miss'), 0, {from: bob});
-        await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(7, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(7, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
        
-        // Since bob has won, bob also needs to reveal all his ships
-        // If not all ships revealed the checks below will fail!!
-        await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: bob});
+        assert.equal(await instance.gameState(), GAMESTATE_STARTED, "game state should be STARTED");
 
-        let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
-        assert.equal(endState.toNumber(), GameEndState_Player2WinsValidGame, "bob wins because she sunk all the ships first");
+        // Declare game finished
+        await instance.tryToDeclareGameFinished({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED");
+
+        // Both players reveal their ships
+        let shipsPacked = getShipsPackedForm(ships);
+        await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: alice});
+        await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: bob});
+
+        assert.equal(await instance.gameState(), GAMESTATE_SHIPSREVEALED, "game state should be SHIPSREVEALED");
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        let endState = await instance.gameEndState();
+        assert.equal(endState.toNumber(), GameEndState_Player2WinsValidGame, "bob wins because he sunk all the ships first");
     });
 
     it("should detect wrongly reported moves (player 1)", async () => {
@@ -637,13 +651,27 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Miss'), 4, {from: alice});
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
         await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Miss'), 4, {from: alice}); // incorrect report
-        await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(1, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: bob});
+        await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
        
-        // Since alice has won, alice also needs to reveal all her ships
-        // If not all ships revealed the checks below will fail!!
-        await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: alice});
+        assert.equal(await instance.gameState(), GAMESTATE_STARTED, "game state should be STARTED");
 
-        let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
+        // Declare game finished
+        await instance.tryToDeclareGameFinished({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED");
+
+        // Both players reveal their ships
+        let shipsPacked = getShipsPackedForm(ships);
+        await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: alice});
+        await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: bob});
+
+        assert.equal(await instance.gameState(), GAMESTATE_SHIPSREVEALED, "game state should be SHIPSREVEALED");
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        let endState = await instance.gameEndState();
         assert.equal(endState.toNumber(), GameEndState_Player2WinsInvalidGame, "bob wins - alice has misreported");
     });
 
@@ -655,13 +683,27 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 0, {from: bob}); // incorrect report
         await instance.makeMoveAndUpdateLastMoveWithResult(6, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
         await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Miss'), 0, {from: bob});
-        await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(7, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(7, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
        
-        // Since bob has won, bob also needs to reveal all his ships
-        // If not all ships revealed the checks below will fail!!
-        await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: bob});
+        assert.equal(await instance.gameState(), GAMESTATE_STARTED, "game state should be STARTED");
 
-        let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
+        // Declare game finished
+        await instance.tryToDeclareGameFinished({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED");
+
+        // Both players reveal their ships
+        let shipsPacked = getShipsPackedForm(ships);
+        await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: alice});
+        await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: bob});
+
+        assert.equal(await instance.gameState(), GAMESTATE_SHIPSREVEALED, "game state should be SHIPSREVEALED");
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        let endState = await instance.gameEndState();
         assert.equal(endState.toNumber(), GameEndState_Player1WinsInvalidGame, "alice wins because, even though bob sunk all the ships first, bob has misreported");
     });
 
@@ -672,14 +714,28 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         await instance.makeMoveAndUpdateLastMoveWithResult(5, 4, convertMoveResultToNumber('Miss'), 0, {from: alice});
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob}); // incorrect report
         await instance.makeMoveAndUpdateLastMoveWithResult(6, 4, convertMoveResultToNumber('Miss'), 0, {from: alice}); // incorrect report
-        await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Miss'), 0, {from: bob});
-        await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(7, 4, convertMoveResultToNumber('Hit'), 4, 2, 1, 0, 4, testNonce, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
+        await instance.makeMoveAndUpdateLastMoveWithResult(7, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
        
-        // Since bob has won, bob also needs to reveal all his ships
-        // If not all ships revealed the checks below will fail!!
-        await instance.revealShip(4, 2, 1, 0, 4, testNonce, {from: bob});
+        assert.equal(await instance.gameState(), GAMESTATE_STARTED, "game state should be STARTED");
 
-        let endState = await instance.checkWinnerWhenBothPlayersRevealedShips();
+        // Declare game finished
+        await instance.tryToDeclareGameFinished({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED");
+
+        // Both players reveal their ships
+        let shipsPacked = getShipsPackedForm(ships);
+        await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: alice});
+        await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: bob});
+
+        assert.equal(await instance.gameState(), GAMESTATE_SHIPSREVEALED, "game state should be SHIPSREVEALED");
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        let endState = await instance.gameEndState();
         assert.equal(endState.toNumber(), GameEndState_Draw, "draw because both players mis-reported");
     });
 });
