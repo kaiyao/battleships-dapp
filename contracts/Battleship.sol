@@ -1,11 +1,10 @@
 pragma solidity ^0.4.23;
 
-import "../installed_contracts/zeppelin/contracts/ownership/Ownable.sol";
-import "../installed_contracts/zeppelin/contracts/lifecycle/Pausable.sol";
-import "../installed_contracts/zeppelin/contracts/payment/PullPayment.sol";
-import "../installed_contracts/zeppelin/contracts/math/SafeMath.sol";
+import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../node_modules/openzeppelin-solidity/contracts/payment/PullPayment.sol";
+import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
-contract Battleship is Ownable, Pausable, PullPayment {
+contract Battleship is Ownable, PullPayment {
     using SafeMath for uint256;
     
     // Configure the game settings here
@@ -124,6 +123,11 @@ contract Battleship is Ownable, Pausable, PullPayment {
         uint indexed refund
     );
 
+    event PaidToEscrow (
+        address indexed _from,
+        uint indexed amount
+    );
+
     event Logs (
         address indexed _from,
         string _data
@@ -215,7 +219,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
         deposit = deposit.add(msg.value);
         if (deposit > betAmount) {
             refund = deposit.sub(betAmount);
-            asyncSend(msg.sender, refund);
+            asyncTransfer(msg.sender, refund);
         }
         players[msg.sender].deposit = deposit;
         emit DepositMade(msg.sender, msg.value, refund);
@@ -652,7 +656,7 @@ contract Battleship is Ownable, Pausable, PullPayment {
 
     }
 
-    function processWinnings() private {
+    function processWinnings() internal {
         require(winningsProcessed == false, "Can only process winnings once");
         require(gameState == GameState.Ended, "Game must have ended");
         require(gameEndState != GameEndState.Unknown, "The game end state must not be unknown");
@@ -665,18 +669,26 @@ contract Battleship is Ownable, Pausable, PullPayment {
         uint winningPrize = totalPrize.sub(losingPrize);       
 
         if (gameEndState == GameEndState.Draw) {
-            asyncSend(player1, betAmount);
-            asyncSend(player2, betAmount);
+            asyncTransfer(player1, betAmount);
+            asyncTransfer(player2, betAmount);
+            emit PaidToEscrow(player1, betAmount);
+            emit PaidToEscrow(player2, betAmount);
         } else if (gameEndState == GameEndState.Player1WinsInvalidGame) {
-            asyncSend(player1, totalPrize);
+            asyncTransfer(player1, totalPrize);
+            emit PaidToEscrow(player1, totalPrize);
         } else if (gameEndState == GameEndState.Player2WinsInvalidGame) {
-            asyncSend(player2, totalPrize);
+            asyncTransfer(player2, totalPrize);
+            emit PaidToEscrow(player2, totalPrize);
         } else if (gameEndState == GameEndState.Player1WinsValidGame) {
-            asyncSend(player1, winningPrize);
-            asyncSend(player2, losingPrize);
+            asyncTransfer(player1, winningPrize);
+            asyncTransfer(player2, losingPrize);
+            emit PaidToEscrow(player1, winningPrize);
+            emit PaidToEscrow(player2, losingPrize);
         } else if (gameEndState == GameEndState.Player2WinsValidGame) {
-            asyncSend(player1, losingPrize);
-            asyncSend(player2, winningPrize);
+            asyncTransfer(player1, losingPrize);
+            asyncTransfer(player2, winningPrize);
+            emit PaidToEscrow(player1, losingPrize);
+            emit PaidToEscrow(player2, winningPrize);
         }
     }
     

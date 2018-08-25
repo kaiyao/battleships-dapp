@@ -18,6 +18,15 @@ contract BattleshipTest is Battleship {
         testModeTimestamp = _timestamp;
     }
 
+    function setGameEndState(GameEndState state) public {
+        gameState = GameState.Ended;
+        gameEndState = state;
+    }
+    
+    function processWinningsTest() public {
+        processWinnings();
+    }
+
     // get player moves packed is used in main game
 
     function batchMakeMove(uint[] _x, uint[] _y, MoveResult[] _result, uint[] _shipNumber) public onlyOwner {

@@ -1034,3 +1034,37 @@ contract('Game detects invalid ship placements ' + assumptionsReminder, async (a
 
     // Can create more tests for outcome of game (gameEndState) when ships have invalid placement
 });
+
+/*
+contract('Game payments', async (accounts) => {
+
+    const owner = accounts[0];
+    const alice = accounts[1];
+    const bob = accounts[2];
+
+    let timestamp = 1535187520;
+
+    it("draw should refund both players", async () => {
+
+        let contract = await BattleshipTest.new(1000, timestamp);
+
+        contract.depositBet({from: alice, value: 1000});
+        contract.depositBet({from: bob, value: 1000});
+
+        contract.setGameEndState(GameEndState_Draw);
+        contract.processWinningsTest();
+
+        //contract.withdrawPayments({from: alice, gas: 5000000});
+
+        const PaidToEscrow = await contract.PaidToEscrow();
+        const log = await new Promise(function(resolve, reject) {
+            PaidToEscrow.watch(function(error, log){ resolve(log);});
+        });
+
+        console.log(log);
+        console.log(log.args);
+        
+    });
+
+});
+*/
