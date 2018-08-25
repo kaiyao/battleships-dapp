@@ -3,15 +3,17 @@ pragma solidity ^0.4.23;
 import "../installed_contracts/zeppelin/contracts/ownership/Ownable.sol";
 import "../installed_contracts/zeppelin/contracts/lifecycle/Pausable.sol";
 import "../installed_contracts/zeppelin/contracts/payment/PullPayment.sol";
+import "../installed_contracts/zeppelin/contracts/math/SafeMath.sol";
 
 contract Battleship is Ownable, Pausable, PullPayment {
+    using SafeMath for uint256;
     
     // Configure the game settings here
     uint public constant boardWidth = 10;
     uint public constant boardHeight = 10;
-    uint constant shipsPerPlayer = 2;
-    uint[shipsPerPlayer] public boardShips = [3, 2];    
-    uint constant shipSpaces = 3 + 2;
+    uint constant shipsPerPlayer = 5;
+    uint[shipsPerPlayer] public boardShips = [5, 4, 3, 3, 2];    
+    uint constant shipSpaces = 5 + 4 + 3 + 3 + 2;
     
     struct Ship {
         uint width;
@@ -125,7 +127,14 @@ contract Battleship is Ownable, Pausable, PullPayment {
         createdAt = getTimestamp();
     }
 
-    // Miscellaneous helper functions
+    // ***************************
+    // * Miscellaneous functions *
+    // ***************************
+    function emergencyStop() public onlyOwner {
+        gameState = GameState.Ended;
+        gameEndState = GameEndState.Draw;
+    }
+
     function getTimestamp() public view returns (uint) {
         if (testMode) {
             return testModeTimestamp;
@@ -264,6 +273,8 @@ contract Battleship is Ownable, Pausable, PullPayment {
     
     function makeMove(uint x, uint y) public onlyPlayers {
         require(gameState == GameState.Started || gameState == GameState.Finished, "Game must be started");
+        require(x >= 0 && x < boardWidth, "X must be in board");
+        require(y >= 0 && y < boardHeight, "Y must be in board");
         
         // Check that it is the player's turn
         require(msg.sender == getWhoseTurn(), "Must be player's turn");
@@ -369,8 +380,8 @@ contract Battleship is Ownable, Pausable, PullPayment {
     function revealShip(uint shipNumber, uint width, uint height, uint x, uint y, bytes32 nonce) public onlyPlayers {
         require(shipNumber >= 0 && shipNumber < shipsPerPlayer, "Ship number must be within range");
         require(width == 1 || height == 1, "Width or height must be 1, the ship cannot be wider");
-        require(x + width < boardWidth, "X coordinate cannot place ship outside of board");
-        require(y + height < boardHeight, "Y coordinate cannot place ship outside of board");
+        require(x.add(width) < boardWidth, "X coordinate cannot place ship outside of board");
+        require(y.add(height) < boardHeight, "Y coordinate cannot place ship outside of board");
         require(
             (boardShips[shipNumber] == width && height == 1) || (boardShips[shipNumber] == height && width == 1), 
             "Ship width/height must match for the ship (ref by shipNumber)"
@@ -517,19 +528,19 @@ contract Battleship is Ownable, Pausable, PullPayment {
 
     function tryToDeclareGameTimeoutOrEnded() public onlyPlayers {
         if (gameState == GameState.Created || gameState == GameState.PlayersJoined) {
-            if (getTimestamp() > createdAt + 24 * 60 * 60) {
+            if (getTimestamp() > createdAt.add(24 * 60 * 60)) {
                 gameState = GameState.Ended;
                 gameEndState = GameEndState.Draw;
                 emit StateChanged(msg.sender, gameState);
             }
         } else if (gameState == GameState.Started) {
-            if (getTimestamp() > startedAt + 24 * 60 * 60) {
+            if (getTimestamp() > startedAt.add(24 * 60 * 60)) {
                 gameState = GameState.Ended;
                 gameEndState = GameEndState.Draw;
                 emit StateChanged(msg.sender, gameState);
             }
         } else if (gameState == GameState.Finished) { // not GameState.ShipsRevealed
-            if (getTimestamp() > finishedAt + 24 * 60 * 60) {
+            if (getTimestamp() > finishedAt.add(24 * 60 * 60)) {
                 gameState = GameState.Ended;
 
                 bool player1ShipsRevealed = checkPlayerShipsRevealed(player1);
