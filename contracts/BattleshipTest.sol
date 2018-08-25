@@ -4,10 +4,9 @@ import "./Battleship.sol";
 
 contract BattleshipTest is Battleship {
 
-    bool public testMode;
-
-    constructor() public {
+    constructor(uint _timestamp) public {
         testMode = true;
+        testModeTimestamp = _timestamp;
     }
 
     function setTestMode() public onlyOwner {

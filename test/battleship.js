@@ -333,6 +333,8 @@ contract('Game test batch add ships and batch move test functions', async(accoun
     let contract;
     let boardShips;
 
+    let timestamp = 1535187520; 
+
     let formatMoves = function(movesPacked) {
         let x = movesPacked[0];
         let y = movesPacked[1];
@@ -353,7 +355,7 @@ contract('Game test batch add ships and batch move test functions', async(accoun
     }
 
     it ('batch ship add and move should match normal ship add and move', async() => {
-        let instance = await BattleshipTest.new();
+        let instance = await BattleshipTest.new(timestamp);
         await instance.setTestMode(); // enable testMode
         boardShips = await instance.getBoardShips();
         var maxShipLength = boardShips.reduce(function(a, b) {
@@ -408,7 +410,7 @@ contract('Game test batch add ships and batch move test functions', async(accoun
         //console.log(normalBobMoves);
 
         // Try all the batch features
-        let instanceBatch = await BattleshipTest.new();
+        let instanceBatch = await BattleshipTest.new(timestamp);
         await instanceBatch.setTestMode(); // enable testMode
         boardShips = await instanceBatch.getBoardShips();
         var maxShipLength = boardShips.reduce(function(a, b) {
@@ -488,7 +490,107 @@ contract('Game test batch add ships and batch move test functions', async(accoun
     });
 });
 
-contract('Game finishing ' + assumptionsReminder, async (accounts) => {
+contract('Game endings - timeouts', async (accounts) => {
+    const owner = accounts[0];
+    const alice = accounts[1];
+    const bob = accounts[2];
+    const carol = accounts[3];
+
+    let contract;
+    let boardShips;
+
+    let timestamp = 1535187520; 
+
+    beforeEach(async () => {
+        let instance = await BattleshipTest.new(timestamp);
+        boardShips = await instance.getBoardShips();
+        contract = instance;
+     });
+
+    it("should not be allowed to end game before waiting 24 hours for 2nd player", async () => {
+        let instance = contract;
+        assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should be CREATED");
+
+        await instance.joinGameForPlayer(alice);
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});        
+        assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should still be CREATED");
+
+        await instance.setTimestamp(await instance.createdAt() + 24 * 60 * 60 + 30);
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        assert.equal(await instance.gameEndState(), GameEndState_Draw, "game is a draw, it hasn't started yet");
+    });
+
+    it("should not be allowed to end game before waiting 24 hours ships to be submitted", async () => {
+        let instance = contract;
+        assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should be CREATED");
+
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
+
+        assert.equal(await instance.gameState(), GAMESTATE_PLAYERSJOINED, "game state should be PLAYERSJOINED");
+
+        // Submit some ships
+        let commitHashes = [];
+        for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
+            let shipWidth = boardShips[shipNumber];
+            let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
+            commitHashes.push(commitHash);
+            
+        }
+        await instance.submitHiddenShipsPacked(commitHashes, {from: alice});
+        
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        assert.equal(await instance.gameState(), GAMESTATE_PLAYERSJOINED, "game state should still be PLAYERSJOINED");
+
+        await instance.setTimestamp(await instance.createdAt() + 24 * 60 * 60 + 30);
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        assert.equal(await instance.gameEndState(), GameEndState_Draw, "game is a draw, it hasn't started yet");
+    });
+
+    it("should not be allowed to end game before waiting 24 hours since game started", async () => {
+        let instance = contract;
+        assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should be CREATED");
+
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
+
+        assert.equal(await instance.gameState(), GAMESTATE_PLAYERSJOINED, "game state should be PLAYERSJOINED");
+
+        // Submit some ships
+        let commitHashes = [];
+        for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
+            let shipWidth = boardShips[shipNumber];
+            let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
+            commitHashes.push(commitHash);
+        }
+        await instance.submitHiddenShipsPacked(commitHashes, {from: alice});
+        await instance.submitHiddenShipsPacked(commitHashes, {from: bob});
+
+        assert.equal((await instance.gameState()).toNumber(), GAMESTATE_STARTED, "game state should be STARTED");
+
+        // Make some move
+        await instance.makeMove(0, 0, {from: alice});
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        assert.equal((await instance.gameState()).toNumber(), GAMESTATE_STARTED, "game state should still be STARTED");
+
+        await instance.setTimestamp(await instance.createdAt() + 24 * 60 * 60 + 30);
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        assert.equal(await instance.gameEndState(), GameEndState_Draw, "game is a draw, it hasn't started yet");
+    });
+});
+
+contract('Game endings ' + assumptionsReminder, async (accounts) => {
     const owner = accounts[0];
     const alice = accounts[1];
     const bob = accounts[2];
@@ -497,6 +599,8 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
     let contract;
     let boardShips;
     let ships = [];
+
+    let timestamp = 1535187520; 
 
     let getShipsPackedForm = function(ships) {
         let packedShips = {width: [], height: [], x: [], y: [], nonce: []};
@@ -513,7 +617,7 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
 
     beforeEach(async () => {
 
-        let instanceBatch = await BattleshipTest.new();
+        let instanceBatch = await BattleshipTest.new(timestamp);
         await instanceBatch.setTestMode(); // enable testMode
         boardShips = await instanceBatch.getBoardShips();
         var maxShipLength = boardShips.reduce(function(a, b) {
@@ -738,6 +842,103 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         let endState = await instance.gameEndState();
         assert.equal(endState.toNumber(), GameEndState_Draw, "draw because both players mis-reported");
     });
+
+    it("should not allow declare game finished if not enough hits", async () => {
+        let instance = contract;
+
+        // last row with ship length = 2
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Miss'), 0, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
+
+        assert.equal(await instance.gameState(), GAMESTATE_STARTED, "game state should be STARTED");
+
+        // Try to declare game finished
+        await catchRevert(instance.tryToDeclareGameFinished({from: alice}));
+    });
+
+    it("both players don't reveal ships 24 hours after finished, allow the game to end", async () => {
+        let instance = contract;
+
+        // last row with ship length = 2
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Miss'), 0, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
+        await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
+
+        assert.equal(await instance.gameState(), GAMESTATE_STARTED, "game state should be STARTED");
+
+        // Declare game finished
+        //console.log("Try to declare game finished");
+        await instance.tryToDeclareGameFinished({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED");
+
+        //console.log("Try to declare game timeout 1", await instance.createdAt(), await instance.startedAt(), await instance.finishedAt());
+        await instance.tryToDeclareGameTimeoutOrEnded({from: bob});
+
+        // State should not have moved
+        assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED 2");
+
+        // Advance time forward
+        await instance.setTimestamp(await instance.finishedAt() + 24 * 60 * 60 + 30);
+
+        //console.log("Try to declare game timeout 2");
+        await instance.tryToDeclareGameTimeoutOrEnded({from: bob});
+
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        let endState = await instance.gameEndState();
+        assert.equal(endState.toNumber(), GameEndState_Draw, "draw because both players did not reveal ships");
+        
+    });
+
+    it("should not allow declare game ended if both players not yet revealed ships or timeout", async () => {
+        let instance = contract;
+
+        // last row with ship length = 2
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Miss'), 0, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
+        await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(1, 4, convertMoveResultToNumber('Hit'), 4, {from: bob});
+
+        assert.equal(await instance.gameState(), GAMESTATE_STARTED, "game state should be STARTED");
+
+        // Declare game finished
+        //console.log("Try to declare game finished");
+        await instance.tryToDeclareGameFinished({from: alice});
+
+        assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED");
+
+        //console.log("Try to declare game timeout 1", await instance.createdAt(), await instance.startedAt(), await instance.finishedAt());
+        await instance.tryToDeclareGameTimeoutOrEnded({from: bob});
+
+        // State should not have moved
+        assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED 2");
+
+        // Only bob reveal ships
+        let shipsPacked = getShipsPackedForm(ships);
+        await instance.revealShipsPacked(shipsPacked['width'], shipsPacked['height'], shipsPacked['x'], shipsPacked['y'], shipsPacked['nonce'], {from: bob});
+        
+        // State should not have moved
+        assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED 3");
+
+        //console.log("Try to declare game timeout 2");
+        await instance.tryToDeclareGameTimeoutOrEnded({from: bob});
+
+        // State should not have moved
+        assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED 4");
+
+        await instance.setTimestamp(await instance.finishedAt() + 24 * 60 * 60 + 30);
+
+        //console.log("Try to declare game timeout 3");
+        await instance.tryToDeclareGameTimeoutOrEnded({from: bob});
+
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        let endState = await instance.gameEndState();
+        assert.equal(endState.toNumber(), GameEndState_Player2WinsInvalidGame, "bob wins because alice did not reveal ships in time limit");
+        
+    });
 });
 
 contract('Game detects invalid ship placements ' + assumptionsReminder, async (accounts) => {
@@ -777,7 +978,7 @@ contract('Game detects invalid ship placements ' + assumptionsReminder, async (a
             await instance.submitHiddenShip(shipNumber, commitHash, {from: bob});
         }
 
-        for (let shipNumber = 0; shipNumber < boardShips.length - 1; shipNumber++) {
+        for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
             let shipWidth = boardShips[shipNumber];
             let shipY = shipNumber;
             if (shipNumber == boardShips.length - 1) {
@@ -787,12 +988,8 @@ contract('Game detects invalid ship placements ' + assumptionsReminder, async (a
             await instance.revealShip(shipNumber, shipWidth, 1, 0, shipY, testNonce, {from: bob});
         }
 
-        let shipNumber = boardShips.length - 1;
-        let shipWidth = boardShips[shipNumber];
-        let shipY = shipNumber - 1;
-        await catchRevert(instance.revealShip(shipNumber, shipWidth, 1, 0, shipY, testNonce, {from: alice}));
-        await catchRevert(instance.revealShip(shipNumber, shipWidth, 1, 0, shipY, testNonce, {from: bob}));
-
+        assert.equal(await instance.isShipPlacementSaneForPlayer(alice), false, "Should catch ship placement overlap");
+        assert.equal(await instance.isShipPlacementSaneForPlayer(bob), false, "Should catch ship placement overlap");
     });
 
     it("should not allow ships to be placed out of board", async () => {
@@ -834,4 +1031,6 @@ contract('Game detects invalid ship placements ' + assumptionsReminder, async (a
         }
 
     });
+
+    // Can create more tests for outcome of game (gameEndState) when ships have invalid placement
 });
