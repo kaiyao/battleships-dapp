@@ -687,21 +687,29 @@ window.addEventListener('load', () => {
       submitHiddenShips: function() {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
         
+        let commitHashPromises = [];
         let commitHashes = [];
         let commitNonceHashes = [];
         for(let i = 0; i < this.myShips.length; i++) {
           let ship = this.myShips[i];
           let nonce = generateRandomBytes32();
           this.$set(this.myShips[i], "nonce", nonce);
-          let commitHash = keccak256(ship.width, ship.height, ship.x, ship.y, nonce);
-          console.log("submit hidden ship", i, commitHash);
-          commitHashes.push(commitHash);
-
-          // store ship hash to ship position locally
-          // (we store the hash rather than object of the ship positions, in case there is some kind of address reuse)
-          let localStorageKey = this.gameAddress + '*' + this.account + '*' + commitHash;
-          localStorage.setItem(localStorageKey, JSON.stringify(this.myShips[i]));
+          let promise = battleshipInstance.calculateCommitHash(ship.width, ship.height, ship.x, ship.y, nonce);
+          commitHashPromises.push(promise);
         };
+        Promise.all(commitHashPromises).then(response => {
+          console.log("Hashes calculated", response);
+          for (let i = 0; i < response; i++) {
+            let commitHash = response[i];
+            console.log("submit hidden ship", i, commitHash);
+            commitHashes.push(commitHash);
+
+            // store ship hash to ship position locally
+            // (we store the hash rather than object of the ship positions, in case there is some kind of address reuse)
+            let localStorageKey = this.gameAddress + '*' + this.account + '*' + commitHash;
+            localStorage.setItem(localStorageKey, JSON.stringify(this.myShips[i]));
+          }
+        });
 
         console.log(commitHashes);
 
