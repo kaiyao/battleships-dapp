@@ -1,6 +1,4 @@
-battleship
-
-# README
+# Battleship DApp Readme
 
 This project implements a DApp Battleship game in Solidity.
 
