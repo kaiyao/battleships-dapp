@@ -9,14 +9,16 @@ To run it, please do the following:
 Ensure you have truffle and ganache-cli installed.
 Start ganache-cli in one command line window.
 In another command line window, do the following:
+- git clone this repository
 - change to the directory where the code is in
+- run "npm install"
 - run "truffle compile"
 - run "truffle migrate"
 - run "truffle test" to run the tests
 - run "npm run dev" to launch the server and browser
 
 The dev server has been configured to listen on 0.0.0.0 instead of the default localhost, this allows you to open the URL on another browser/computer/VM to visit the same page and interact as two different players.
-Note that lite-server by default turns on browsersync which messes things up (since each player is supposed to do their own stuff rather than the same actions). Go to localhost:3001 to access the browsersync configuration. Then click "Sync Options" on the left, and click "Disable All" to disable all synchorization.
+Note that lite-server is used (same as in pet shop tutorial) but has been configured to listen on 0.0.0.0 and ghost mode is off. Ghost mode is normally on by default and it syncs clicks etc. which messes things up (since each player is supposed to do their own stuff rather than the same actions). If you need to change it go to localhost:3001 to access the browsersync configuration. Then click "Sync Options" on the left, and click "Disable All" to disable all synchorization.
 Obviously, Metamask must be configured to use the same Custom RPC (http://[your IP]:8545) for both browsers to be on the same private network and interact with each other.
 Metamask must also be using the same seed words on both browsers to interact with ganache-cli.
 Metamask must also be using a different account (click the icon near the top right of the Metamask popup - the one with the human icon and two arrows around it) and click "Create Account".
@@ -33,8 +35,17 @@ Battleship.sol contains the actual game itself.
 Troubleshooting:
 - Sometimes, the first time the page loads in Chrome, there is some Metamask issues (which you can see in the Chrome developer console). Just try to refresh the page and it should work the 2nd time.
 - If there is any issues with the page, try to refresh the page.
-- This app uses localstorage to store the positions of the ships before they are revealed at the end of the game. If you are using some browser/plugins that block localstorage, this can be an issue (e.g. Brave browser seems to not work).
+- This app uses localstorage to store the positions of the ships before they are revealed at the end of the game. If you are using some browser/plugins that block localstorage, this can be an issue (e.g. Brave browser requires you to disable site shield).
 - The final withdrawal of winnings/refunds seems to require more gas that what MetaMask estimates by default which causes the transaction to fail (it says revert in the Chrome developer console). You need to set this gas value manually.
+
+Reset all stuff:
+Sometimes, things just don't work (out of sync, "the tx doesn't have the correct nonce", or whatever). When this happens, this is what I do:
+- close and restart ganache-cli
+- truffle compile
+- truffle migrate --reset
+- npm run dev
+- in the MetaMask extension, for all the test accounts used, click on the 3 lines icon at the top right -> Settings -> Reset Account
+- refresh the page in the browser and try again
 
 Tests
 =====
@@ -117,7 +128,8 @@ You can see a list of the tests and descriptions here:
 Libraries/EthPM
 ===============
 
-The zepplin library is used in the code. Specifically, the OnlyOwner, PullPayments and SafeMath libraries are used.
+The zeppelin library is used in the code. Specifically, the OnlyOwner, PullPayments and SafeMath libraries are used.
+Even though there is an ethpm.json the version of zeppelin in ethpm is much older than the version in npm. Hence the npm install is used instead.
 
 
 design_pattern_desicions.md
