@@ -11,9 +11,9 @@ contract Battleship is Ownable, Pausable, PullPayment {
     // Configure the game settings here
     uint public constant boardWidth = 10;
     uint public constant boardHeight = 10;
-    uint constant shipsPerPlayer = 2;
-    uint[shipsPerPlayer] public boardShips = [3, 2];    
-    uint constant shipSpaces = 3 + 2;
+    uint constant shipsPerPlayer = 5;
+    uint[shipsPerPlayer] public boardShips = [5, 4, 3, 3, 2];    
+    uint constant shipSpaces = 5 + 4 + 3 + 3 + 2;
     
     struct Ship {
         uint width;
