@@ -116,7 +116,7 @@ You can see a list of the tests and descriptions here:
 Libraries/EthPM
 ===============
 
-The zepplin library is used in the code. Specifically, the OnlyOwner and PullPayments components are used.
+The zepplin library is used in the code. Specifically, the OnlyOwner, PullPayments and SafeMath libraries are used.
 
 
 design_pattern_desicions.md
@@ -155,34 +155,52 @@ This is not used because the game mechanism itself has its own "expiry" mechanis
 
 Mortal
 
+This is not implemented.
+
 Speed Bump
 
 
 avoiding_common_attacks.md
 ==========================
 
+Logic Bugs:
 A set of automated tests perform tests on game scenarios to try to avoid logic bugs.
 
+Recursive call attacks:
 Pull payments is used to avoid recursive call attacks. External calls are avoided.??
 
-Overflow is avoided by using SafeMath and validating user input.??
+Overflow:
+User inputs are validated. E.g. a shot's x, y coordinate is required to be within the board dimensions.
+For cases where arithmetic is used on user inputs before validation (e.g. check that for a horizontally placed ship, the  starting x coordinate + length is less than the board width) we use the SafeMath library provided by zepplin.
 
+Poison data:
 Poison data is avoided by validating user input.
 
+Exposed functions:
 Exposed functions is avoided by having an onlyPlayer modifier. Functions that specifically modify the game state for a particular player have that modifier.
 
+Exposed data:
 Exposure of data is avoided by using the commit/reveal pattern. All other data is non-sensitive.
 
+Timestamp vulnerabilities:
 Timestamp vulnerabilites are avoided by having a 24 hour "leeway" for time-based operations. As such, the game is not dependent on the exact time and will not have issues even if the time is off by a few minutes.
 
+Contract Administration Risk:
 Contract administration risk is reduced by making the only action that the owner can do is to decide the game is a draw and refund the participants. While currently the game uses only one admin (the owner), the risk is low as a result.
 
+Cross Chain Replay:
 Cross chain replay can be an issue. If the chain forks halfway in one game and the subsequently the game is finished, the one who lost can theoretically replay the moves on the new chain but change his/her moves so that on the new chain, he/she wins.
 
+Gas Limits:
 Gas limit issues are avoided by not having unbounded loops. All loops in the game logic are bounded by the board size, and will at worst loop through every single square on the board. There are also no dynamic-size arrays in the game for this reason.
 In the lobby, there are dynamic arrays for the games. But there is no loop over the arrays, so this is not an issue.
+In addition, in truffle.js a 6000000 gas limit has been configured (which is lower than that on TestNets and the MainNet), and the unit tests pass.
+The transaction that uses the most gas is actually creating a new game on the blockchain, as it tries to deploy a new BattleShop.sol contract.
 
-Denial of Service is avoided by having time-based limits. If the opponent stops playing the game, the remaining player will be able to end the game and get a refund after 24 hours.
+Denial of Service:
+Denial of Service is avoided with the following:
+1. Avoiding unbounded loops. The game works with a fixed size game board and all inputs are fixed size.
+2. Having time-based limits. If the opponent stops playing the game, the remaining player will be able to end the game and get a refund after 24 hours.
 
 Force sending ether is not an issue because the game only works on the amounts deposited by the players. Any extra balance is ignored.
 
