@@ -4,7 +4,7 @@
 A set of automated tests perform tests on game scenarios to try to avoid logic bugs.
 
 ## Recursive call attacks:
-Pull payments is used to avoid recursive call attacks. External calls are avoided.??
+Pull payments is used to avoid recursive call attack issues when sending ether. In general, external calls are avoided. Even when the Lobby contract calls the Battleship contract, it does the all the necessary work first before calling functions on the other contract.
 
 ## Overflow
 User inputs are validated. E.g. a shot's x, y coordinate is required to be within the board dimensions.

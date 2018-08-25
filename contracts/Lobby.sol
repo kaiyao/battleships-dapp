@@ -37,29 +37,28 @@ contract Lobby is Ownable {
 
     function createOpenGame(uint betAmount) public payable returns (address) {
         address newContract = new Battleship(betAmount);
-        Battleship(newContract).joinGameForPlayer(msg.sender);
         games[msg.sender].push(newContract);
         openGames.push(newContract);
+        Battleship(newContract).joinGameForPlayer(msg.sender);
         emit OpenGameCreated(msg.sender, newContract);
         return newContract;
     }
 
     function createGameWithOpponent(address opponent, uint betAmount) public payable returns (address) {
         address newContract = new Battleship(betAmount);
-        Battleship(newContract).joinGameForPlayer(msg.sender);
-        Battleship(newContract).joinGameForPlayer(opponent);
         games[msg.sender].push(newContract);
         games[opponent].push(newContract);
+        Battleship(newContract).joinGameForPlayer(msg.sender);
+        Battleship(newContract).joinGameForPlayer(opponent);
         emit GameWithOpponentCreated(msg.sender, opponent, newContract);
         return newContract;
     }
 
     function joinOpenGame(uint gameIndex) public payable returns (address) {
-        address gameAddress = openGames[gameIndex];
-
-        Battleship(gameAddress).joinGameForPlayer(msg.sender);
+        address gameAddress = openGames[gameIndex];        
         games[msg.sender].push(gameAddress);
         delete openGames[gameIndex];
+        Battleship(gameAddress).joinGameForPlayer(msg.sender);
         emit OpenGameJoined(msg.sender, gameAddress);
 
         return gameAddress;
