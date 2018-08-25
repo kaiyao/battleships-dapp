@@ -31,7 +31,6 @@ function convertMoveResultToNumber(moveResult) {
     return moveResultEnum[moveResult];
 };
 
-
 contract('Game startup', async (accounts) => {
     const owner = accounts[0];
     const alice = accounts[1];
@@ -321,8 +320,8 @@ contract('Game make shots ' + assumptionsReminder, async (accounts) => {
     });
 });
 
+contract('Game test function test', async(accounts) => {
 
-contract('Game finishing ' + assumptionsReminder, async (accounts) => {
     const owner = accounts[0];
     const alice = accounts[1];
     const bob = accounts[2];
@@ -330,37 +329,26 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
 
     let boardShips;
 
-    let cacheAlice = {
-        revealShips: [],
-        revealShipsCount: 0,
-        hiddenShips: [],
-        hiddenShipsCount: 0,
-        moves: [],
-        movesCount: 0,
-        hitCount: 0,
-        perShipHitCount: [],
-    };
+    let formatMoves = function(movesPacked) {
+        let x = movesPacked[0];
+        let y = movesPacked[1];
+        let result = movesPacked[2];
+        let shipNumber = movesPacked[3];
 
-    let cacheBob = {
-        revealShips: [],
-        revealShipsCount: 0,
-        hiddenShips: [],
-        hiddenShipsCount: 0,
-        moves: [],
-        movesCount: 0,
-        hitCount: 0,
-        perShipHitCount: [],
-    };
+        let moves = [];
+        for (let i = 0; i < x.length; i++) {
+            moves.push({
+                x: x[i].toNumber(),
+                y: y[i].toNumber(),
+                result: result[i].toNumber(),
+                shipNumber: shipNumber[i].toNumber()
+            })
+        }
 
-    let cacheAliceMoves = [];
-    let cacheAliceMovesCount = 0;
-    let cacheAliceRevealedShips = [];
-    let cacheBobMoves = [];
-    let cacheBobMovesCount = 0;
-    let cacheBobRevealedShips = [];
+        return moves;
+    }
 
-    before(async () => {
-
+    it ('batch move should match normal move', async() => {
         let instance = await BattleshipTest.new();
         await instance.setTestMode(); // enable testMode
         boardShips = await instance.getBoardShips();
@@ -377,14 +365,13 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         // 3 3 3
         // 3 3 3
         // 2 2
-
+        
         for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
             let shipWidth = boardShips[shipNumber];
             // just put the ships next to each other
             let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
-            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+            await instance.submitHiddenShip(shipNumber, commitHash, {from: alice});
+            await instance.submitHiddenShip(shipNumber, commitHash, {from: bob});
         }
 
         // Play until all the ships have been hit except last ship (boardShips.length - 1 to exclude last row)
@@ -394,48 +381,120 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
                 if (y == 0 && x == 0) { // first move
                     //console.log("alice", x, y);
                     await instance.makeMove(x, y, {from: alice});
-                } else if (x > 0 && x < boardShips[y]) { // if ship is length 5, x = 1 .. 5 is when opponent put x = 0 .. 4 which is hit
+                } else if (x > 0 && x <= boardShips[y]) { // if ship is length 5, x = 1 .. 5 is when opponent put x = 0 .. 4 which is hit
                     //console.log("alice", x, y, 'Hit', y);
                     await instance.makeMoveAndUpdateLastMoveWithResult(x, y, convertMoveResultToNumber('Hit'), y, {from: alice}); 
-                } else if (x == boardShips[y]) { // if ship is length 5, at x = 5, opponent just put x = 4 and sunk the ship in previous move
-                    //console.log("alice", x, y, 'Hit', y, boardShips[y], 1, 0, y);
-                    await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(x, y, convertMoveResultToNumber('Hit'), y, boardShips[y], 1, 0, y, testNonce, {from: alice});
                 } else {
                     //console.log("alice", x, y, 'Miss', 0);
                     await instance.makeMoveAndUpdateLastMoveWithResult(x, y, convertMoveResultToNumber('Miss'), 0, {from: alice}); 
                 }
 
                 //console.log("bob", x, y);
-                if (x < boardShips[y] - 1) { // if ship is length 5, x = 0 .. 4 is hit
+                if (x <= boardShips[y] - 1) { // if ship is length 5, x = 0 .. 4 is hit
                     await instance.makeMoveAndUpdateLastMoveWithResult(x, y, convertMoveResultToNumber('Hit'), y, {from: bob}); 
-                } else if (x == boardShips[y] - 1) { // if ship is length 5, at x = 4, opponent just put sunk the ship in previous move
-                    await instance.makeMoveAndUpdateLastMoveWithResultAndRevealShip(x, y, convertMoveResultToNumber('Hit'), y, boardShips[y], 1, 0, y, testNonce, {from: bob});
                 } else {
                     await instance.makeMoveAndUpdateLastMoveWithResult(x, y, convertMoveResultToNumber('Miss'), 0, {from: bob}); 
                 }
             }
         }
 
-        // because it takes some time to set up the moves, we "cache" them and use them to create new instances in beforeEach
-        cacheAlice.moves = await instance.getPlayerMovesPacked(alice);
-        cacheAlice.movesCount = await instance.getPlayerMovesCount(alice);
-        cacheAlice.revealShips = await instance.getRevealShipsPackedForPlayer(alice);
-        cacheAlice.revealShipsCount = await instance.getRevealShipsCountForPlayer(alice);
-        cacheAlice.hiddenShips = await instance.getHiddenShipsPacked({from: alice});
-        cacheAlice.hiddenShipsCount = (await instance.getBoardShips()).length;
-        cacheAlice.hitCount = await instance.getHitCountForPlayer(alice);
-        cacheAlice.perShipHitCount = await instance.getPerShipHitCountForPlayer(alice);
+        let normalAliceMoves = formatMoves(await instance.getPlayerMovesPacked(alice));
+        let normalBobMoves = formatMoves(await instance.getPlayerMovesPacked(bob));
+        //console.log(normalAliceMoves);
+        //console.log(normalBobMoves);
 
-        cacheBob.moves = await instance.getPlayerMovesPacked(bob);
-        cacheBob.movesCount = await instance.getPlayerMovesCount(bob);
-        cacheBob.revealShips = await instance.getRevealShipsPackedForPlayer(bob);
-        cacheBob.revealShipsCount = await instance.getRevealShipsCountForPlayer(bob);
-        cacheBob.hiddenShips = await instance.getHiddenShipsPacked({from: bob});
-        cacheBob.hiddenShipsCount = (await instance.getBoardShips()).length;
-        cacheBob.hitCount = await instance.getHitCountForPlayer(bob);
-        cacheBob.perShipHitCount = await instance.getPerShipHitCountForPlayer(bob);
+        // Try all the batch features
+        let instanceBatch = await BattleshipTest.new();
+        await instanceBatch.setTestMode(); // enable testMode
+        boardShips = await instanceBatch.getBoardShips();
+        var maxShipLength = boardShips.reduce(function(a, b) {
+            return Math.max(a, b);
+        });
 
-        contract = instance;
+        await instanceBatch.joinGameForPlayer(alice);
+        await instanceBatch.joinGameForPlayer(bob);
+
+        // Sets up ships like the following
+        // 5 5 5 5 5
+        // 4 4 4 4
+        // 3 3 3
+        // 3 3 3
+        // 2 2
+
+        let commitHashes = [];
+        for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
+            let shipWidth = boardShips[shipNumber];
+            // just put the ships next to each other
+            let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
+            commitHashes.push(commitHash);
+        }
+        await instanceBatch.submitHiddenShipsPacked(commitHashes, {from: alice});
+        await instanceBatch.submitHiddenShipsPacked(commitHashes, {from: bob});
+
+        assert.deepEqual(await instanceBatch.getHiddenShipsPackedForPlayer(alice), await instance.getHiddenShipsPackedForPlayer(alice), "Packed ships should be the same");
+        assert.deepEqual(await instanceBatch.getHiddenShipsPackedForPlayer(bob), await instance.getHiddenShipsPackedForPlayer(bob), "Packed ships should be the same");
+    
+
+        let moves = [];
+        // Play until all the ships have been hit except last ship (boardShips.length - 1 to exclude last row)
+        for (let y = 0; y < boardShips.length - 1; y++) {
+            // maxShipLength + 1 to make it easier to calculate stuff (don't have to handle wrapping)
+            for (let x = 0; x < maxShipLength + 1; x++) {
+                let moveResult = convertMoveResultToNumber('Miss');
+                let shipNumber = 0;
+                if (x < boardShips[y]) {
+                    moveResult = convertMoveResultToNumber('Hit');
+                    shipNumber = y;
+                }
+
+                // Push alice move
+                moves.push({x: x, y: y, result: moveResult, shipNumber: shipNumber});
+                // Push bob's move
+                moves.push({x: x, y: y, result: moveResult, shipNumber: shipNumber});
+            }
+        }
+        // we manually fix the last move as it should be unknown status
+        moves[moves.length - 1].result = convertMoveResultToNumber('Unknown');
+        moves[moves.length - 1].shipNumber = 0;
+
+        let movesX = [];
+        let movesY = [];
+        let movesResult = [];
+        let movesShipNumber = [];
+        for (let i = 0; i < moves.length; i++) {
+            movesX.push(moves[i].x);
+            movesY.push(moves[i].y);
+            movesResult.push(moves[i].result);
+            movesShipNumber.push(moves[i].shipNumber);
+        }
+        //console.log(movesX, movesY, movesResult, movesShipNumber);
+        await instanceBatch.batchMakeMove(movesX, movesY, movesResult, movesShipNumber);
+
+        let batchAliceMoves = formatMoves(await instanceBatch.getPlayerMovesPacked(alice));
+        let batchBobMoves = formatMoves(await instanceBatch.getPlayerMovesPacked(bob));
+        //console.log(batchAliceMoves);
+        //console.log(batchBobMoves);
+
+        for(let i = 0; i < 100; i++) {
+            //console.log(i, "Alice", JSON.stringify(normalAliceMoves[i]) == JSON.stringify(batchAliceMoves[i]), normalAliceMoves[i], batchAliceMoves[i]);
+            //console.log(i, "Bob", JSON.stringify(normalBobMoves[i]) == JSON.stringify(batchBobMoves[i]), normalBobMoves[i], batchBobMoves[i]);
+            assert.deepEqual(normalAliceMoves[i], batchAliceMoves[i], "Alice move number (0-indexed) " + i + " should be equal");
+            assert.deepEqual(normalBobMoves[i], batchBobMoves[i], "Bob move number (0-indexed) " + i + " should be equal");
+        }
+    });
+});
+
+/*
+contract('Game finishing ' + assumptionsReminder, async (accounts) => {
+    const owner = accounts[0];
+    const alice = accounts[1];
+    const bob = accounts[2];
+    const carol = accounts[3];
+
+    let boardShips;
+
+    before(async () => {
+
     });
 
     beforeEach(async () => {
@@ -576,6 +635,7 @@ contract('Game finishing ' + assumptionsReminder, async (accounts) => {
         assert.equal(endState.toNumber(), GameEndState_Draw, "draw because both players mis-reported");
     });
 });
+*/
 
 contract('Game detects invalid ship placements ' + assumptionsReminder, async (accounts) => {
     const owner = accounts[0];
@@ -610,9 +670,8 @@ contract('Game detects invalid ship placements ' + assumptionsReminder, async (a
                 shipY = shipNumber - 1;
             }
             let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipY, testNonce);
-            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+            await instance.submitHiddenShip(shipNumber, commitHash, {from: alice});
+            await instance.submitHiddenShip(shipNumber, commitHash, {from: bob});
         }
 
         for (let shipNumber = 0; shipNumber < boardShips.length - 1; shipNumber++) {
@@ -651,14 +710,13 @@ contract('Game detects invalid ship placements ' + assumptionsReminder, async (a
             let shipWidth = boardShips[shipNumber];
             // just put the ships next to each other (except Bob's last ship)
             let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
-            let commitNonceHash = await instance.calculateCommitNonceHash(testNonce);
-            await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: alice});
+            await instance.submitHiddenShip(shipNumber, commitHash, {from: alice});
             if (shipNumber < boardShips.length - 1) {
-                await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+                await instance.submitHiddenShip(shipNumber, commitHash, {from: bob});
             } else {
                 // For the last ship, we place it at the bottom right
                 commitHash = await instance.calculateCommitHash(shipWidth, 1, boardWidth - 1, boardHeight - 1, testNonce);
-                await instance.submitHiddenShip(shipNumber, commitHash, commitNonceHash, {from: bob});
+                await instance.submitHiddenShip(shipNumber, commitHash, {from: bob});
             }
         }
 

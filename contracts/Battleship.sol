@@ -380,25 +380,17 @@ contract Battleship is Ownable, Pausable, PullPayment {
         }
     }
 
-    function checkAllShipsRevealed() public view returns (bool) {
-        return (checkPlayerShipsRevealed(player1) && checkPlayerShipsRevealed(player2));
-    }
-
-    function checkPlayerShipsRevealed(address player) public view returns (bool) {
-        uint playerShips;
+    function getRevealShipsCountForPlayer(address player) public view returns (uint) {
+        uint playerShipsCount;
         for (uint i = 0; i < shipsPerPlayer; i++) {
             // We only check the width and height, as x, y are allowed to be zero
             if (players[player].revealShips[i].width != 0 && players[player].revealShips[i].height != 0) {
-                playerShips++;
+                playerShipsCount++;
             }
         }
-        if (playerShips >= shipsPerPlayer) {
-            return true;
-        } else {
-            return false;
-        }
+        return playerShipsCount;
     }
-
+    
     function getRevealShipsPackedForPlayer(address player) public view returns (uint[shipsPerPlayer], uint[shipsPerPlayer], uint[shipsPerPlayer], uint[shipsPerPlayer]) {
         uint[shipsPerPlayer] memory width;
         uint[shipsPerPlayer] memory height;
@@ -413,6 +405,15 @@ contract Battleship is Ownable, Pausable, PullPayment {
         }
         return (width, height, x, y);
     }
+
+    function checkPlayerShipsRevealed(address player) public view returns (bool) {
+        return getRevealShipsCountForPlayer(player) >= shipsPerPlayer;
+    }
+
+    function checkAllShipsRevealed() public view returns (bool) {
+        return (checkPlayerShipsRevealed(player1) && checkPlayerShipsRevealed(player2));
+    }
+
 
     function isShipPlacementSaneForPlayer(address player) public view returns (bool) {
         uint[boardWidth][boardHeight] memory board;
@@ -588,6 +589,6 @@ contract Battleship is Ownable, Pausable, PullPayment {
             }
         }
 
-    } 
+    }
     
 }

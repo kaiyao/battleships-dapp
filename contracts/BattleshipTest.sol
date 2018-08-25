@@ -24,11 +24,11 @@ contract BattleshipTest is Battleship {
     function batchMakeMove(uint[] _x, uint[] _y, MoveResult[] _result, uint[] _shipNumber) public onlyOwner {
         require(testMode);
         
-        for (uint i = 0; i < x; i++) {
+        for (uint i = 0; i < _x.length; i++) {
             uint x = _x[i];
             uint y = _y[i];
-            MoveResult result = _result[i+2];
-            uint shipNumber = _shipNumber[i+3];
+            MoveResult result = _result[i];
+            uint shipNumber = _shipNumber[i];
 
             address player = getWhoseTurn();
             uint playerMoveCount = getPlayerMovesCount(player);
