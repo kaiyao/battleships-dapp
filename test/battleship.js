@@ -1035,7 +1035,18 @@ contract('Game detects invalid ship placements ' + assumptionsReminder, async (a
     // Can create more tests for outcome of game (gameEndState) when ships have invalid placement
 });
 
-/*
+function getAccountBalance(address) {
+    return new Promise(function (resolve, reject) {
+        web3.eth.getBalance(address, function(err, result) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(result.toNumber());
+            }
+        });
+    });
+}
+
 contract('Game payments', async (accounts) => {
 
     const owner = accounts[0];
@@ -1044,27 +1055,40 @@ contract('Game payments', async (accounts) => {
 
     let timestamp = 1535187520;
 
+    let betAmount = 10000000000000000000;
+    let delta = betAmount * 0.001;
+
     it("draw should refund both players", async () => {
 
-        let contract = await BattleshipTest.new(1000, timestamp);
+        let instance = await BattleshipTest.new(betAmount, timestamp);
+        await instance.setTestMode();
 
-        contract.depositBet({from: alice, value: 1000});
-        contract.depositBet({from: bob, value: 1000});
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
 
-        contract.setGameEndState(GameEndState_Draw);
-        contract.processWinningsTest();
+        let aliceBeforeDeposit = await getAccountBalance(alice);
+        await instance.depositBet({from: alice, value: betAmount});
+        let aliceAfterDeposit = await getAccountBalance(alice);
+        assert.approximately(aliceAfterDeposit, aliceBeforeDeposit - betAmount, delta, "alice should have deposit");
 
-        //contract.withdrawPayments({from: alice, gas: 5000000});
+        let bobBeforeDeposit = await getAccountBalance(bob);
+        await instance.depositBet({from: bob, value: betAmount});
+        let bobAfterDeposit = await getAccountBalance(bob);
+        assert.approximately(bobAfterDeposit, bobBeforeDeposit - betAmount, delta, "bob should have deposit");
 
-        const PaidToEscrow = await contract.PaidToEscrow();
-        const log = await new Promise(function(resolve, reject) {
-            PaidToEscrow.watch(function(error, log){ resolve(log);});
-        });
+        await instance.setGameEndState(GameEndState_Draw);
+        await instance.processWinningsTest();
 
-        console.log(log);
-        console.log(log.args);
+        let aliceBeforeWithdraw = await getAccountBalance(alice);
+        await instance.withdrawPayments({from: alice, gas: 5000000});
+        let aliceAfterWithdraw = await getAccountBalance(alice);
+        assert.approximately(aliceAfterWithdraw, aliceBeforeWithdraw + betAmount, delta, "alice should have refund");
+
+        let bobBeforeWithdraw = await getAccountBalance(bob);
+        await instance.withdrawPayments({from: bob, gas: 5000000});
+        let bobAfterWithdraw = await getAccountBalance(bob);
+        assert.approximately(bobAfterWithdraw, bobBeforeWithdraw + betAmount, delta, "bob should have refund");
         
     });
 
 });
-*/
