@@ -316,6 +316,7 @@ window.addEventListener('load', () => {
           return this.getGames();
         }).catch(err => {
           console.log(err.message);
+          alert(err.message);
         });
 
       },
@@ -328,6 +329,7 @@ window.addEventListener('load', () => {
           return this.getGames();
         }).catch(err => {
           console.log(err.message);
+          alert(err.message);
         });
       },
 
@@ -649,7 +651,12 @@ window.addEventListener('load', () => {
 
       depositBet: function () {
         var battleshipInstance = this.contracts.Battleship.at(this.gameAddress);
-        battleshipInstance.depositBet({from: this.account, value: this.betAmount});
+        battleshipInstance.depositBet({from: this.account, value: this.betAmount}).then(result => {
+          console.log(result);
+        }).catch(err => {
+          console.log(err.message);
+          alert(err.message);
+        });
       },
 
       addShipResetHighlightPlacement: function () {
@@ -760,6 +767,9 @@ window.addEventListener('load', () => {
           console.log(commitHashes);
           battleshipInstance.submitHiddenShipsPacked(commitHashes, { from: this.account }).then(response => {
             console.log("hidden ships submitted packed");
+          }).catch(err => {
+            console.log(err.message);
+            alert(err.message);
           });
         
         });
@@ -828,11 +838,17 @@ window.addEventListener('load', () => {
           battleshipInstance.makeMoveAndUpdateLastMoveWithResult(x * 1, y * 1, moveResultNumber * 1, shipNumber * 1, { from: this.account }).then(response => {
             console.log("move submitted and updated last move");
             this.waitingForMovesUpdate = true;
+          }).catch(err => {
+            console.log(err.message);
+            alert(err.message);
           });
         } else {        
           battleshipInstance.makeMove(x * 1, y * 1, { from: this.account }).then(response => {
             console.log("move submitted");
             this.waitingForMovesUpdate = true;
+          }).catch(err => {
+            console.log(err.message);
+            alert(err.message);
           });
         }
       },
@@ -843,6 +859,9 @@ window.addEventListener('load', () => {
         battleshipInstance.tryToDeclareGameFinished({ from: this.account }).then(response => {
           console.log("tried to declare game finished");
           this.waitingForMovesUpdate = true;
+        }).catch(err => {
+          console.log(err.message);
+          alert(err.message);
         });
       },
 
@@ -868,6 +887,9 @@ window.addEventListener('load', () => {
         battleshipInstance.revealShipsPacked(packedShips.width, packedShips.height, packedShips.x, packedShips.y, packedShips.nonce, { from: this.account }).then(response => {
           console.log("tried to reveal ships");
           this.waitingForMovesUpdate = true;
+        }).catch(err => {
+          console.log(err.message);
+          alert(err.message);
         });
       },
 
@@ -877,6 +899,9 @@ window.addEventListener('load', () => {
         battleshipInstance.tryToDeclareGameTimeoutOrEnded({ from: this.account }).then(response => {
           console.log("tried to declare game timeout or ended");
           this.waitingForMovesUpdate = true;
+        }).catch(err => {
+          console.log(err.message);
+          alert(err.message);
         });
       },
 
@@ -885,6 +910,9 @@ window.addEventListener('load', () => {
 
         battleshipInstance.withdrawPayments({ from: this.account }).then(response => {
           console.log("withdrawn payments");
+        }).catch(err => {
+          console.log(err.message);
+          alert(err.message);
         });
       },
 
