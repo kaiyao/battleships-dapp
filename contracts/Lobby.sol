@@ -2,6 +2,7 @@ pragma solidity ^0.4.24;
 
 import "./Battleship.sol";
 
+/** @title Game lobby contract */
 contract Lobby is Ownable {
 
     mapping (address => address[]) public games;
@@ -23,18 +24,31 @@ contract Lobby is Ownable {
         address indexed _gameAddress
     );
 
+    /** @dev Constructor for this contract. Currently does nothing but the 
+      *      owner is stored because the contract inherits from Ownable.
+      */
     constructor() public {
 
     }
 
+    /** @dev Gets the list of games whereby the sender is involved.
+      * @return Array of addresses to the Battleship game contracts that the sender is in
+      */
     function getGamesBelongingToPlayer() public view returns (address[]) {
         return games[msg.sender];
     }
 
+    /** @dev Gets the list of games which only have one player and are waiting for a second player to join (open games)
+      * @return Array of addresses to the Battleship game contracts with only one player
+      */
     function getOpenGames() public view returns (address[]) {
         return openGames;
     }
 
+    /** @dev Creates a new open game with the sender for another player to join
+      * @param betAmount The amount (in wei) that the sender wants to set as the bet to be placed for players in the game
+      * @return Address to the Battleship game contract deployed
+      */
     function createOpenGame(uint betAmount) public payable returns (address) {
         address newContract = new Battleship(betAmount);
         games[msg.sender].push(newContract);
@@ -44,6 +58,11 @@ contract Lobby is Ownable {
         return newContract;
     }
 
+    /** @dev Creates a new game with the sender and another opponent
+      * @param opponent Address of an opponent account
+      * @param betAmount The amount (in wei) that the sender wants to set as the bet to be placed for players in the game
+      * @return Address to the Battleship game contract deployed
+      */
     function createGameWithOpponent(address opponent, uint betAmount) public payable returns (address) {
         address newContract = new Battleship(betAmount);
         games[msg.sender].push(newContract);
@@ -54,6 +73,11 @@ contract Lobby is Ownable {
         return newContract;
     }
 
+    /** @dev Join an open game
+      * @param gameIndex The index of the openGames array that corresponds to the game that the player wants to join
+      *                  Note that the index is fixed, deletion of old games does not change the index
+      * @return Address to the Battleship game contract joined
+      */
     function joinOpenGame(uint gameIndex) public payable returns (address) {
         address gameAddress = openGames[gameIndex];        
         games[msg.sender].push(gameAddress);
