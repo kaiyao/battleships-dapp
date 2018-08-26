@@ -179,10 +179,15 @@
                     <p>If you have already placed your ships, wait for your opponent to do so.</p>
                     <p>Waited too long? If it has already been 24 hours since the other player joined, you can request to end the game.</p>
                 </template>
-                <template v-if="getGameStateString == 'Started'">
+                <template v-if="getGameStateString == 'Started' && lastMoveAt == 0">
                     <p>Current game state: Started ({{ moment.unix(startedAt).fromNow() }}, {{ moment.unix(startedAt).format("YYYY-MM-DD h:mm:ss A Z") }})</p>
                     <p>The game has started. Take turns to make shots at each other.</p>
                     <p>If your opponent is not participating and it has already been 24 hours since the game started, you can request to end the game.</p>
+                </template>
+                <template v-if="getGameStateString == 'Started' && lastMoveAt > 0">
+                    <p>Current game state: Started (last shot was {{ moment.unix(lastMoveAt).fromNow() }}, {{ moment.unix(startedAt).format("YYYY-MM-DD h:mm:ss A Z") }})</p>
+                    <p>The game has started. Take turns to make shots at each other.</p>
+                    <p>If your opponent is not participating and it has already been 24 hours since your last shot, you can request to end the game.</p>
                 </template>
                 <template v-if="getGameStateString == 'Finished'">
                     <p>Current game state: Finished ({{ moment.unix(finishedAt).fromNow() }}, {{ moment.unix(finishedAt).format("YYYY-MM-DD h:mm:ss A Z") }})</p>

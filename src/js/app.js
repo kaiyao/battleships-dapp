@@ -383,6 +383,7 @@ window.addEventListener('load', () => {
       createdAt: 0,
       startedAt: 0,
       finishedAt: 0,
+      lastMoveAt: 0,
       moment: window.moment,
     },
     created: function () {
@@ -619,6 +620,10 @@ window.addEventListener('load', () => {
         var getWhoseTurnPromise = battleshipInstance.getWhoseTurn.call().then(val => {
           console.log("Whose turn", val);
           this.whoseTurn = val;
+        });
+
+        battleshipInstance.lastMoveAt.call().then(val => {
+          this.lastMoveAt = val.toNumber();
         });
 
         // Recall ships from localstorage
