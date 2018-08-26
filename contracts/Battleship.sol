@@ -670,7 +670,9 @@ contract Battleship is Ownable, PullPayment {
         require(gameState == GameState.Ended, "Game must have ended");
         require(gameEndState != GameEndState.Unknown, "The game end state must not be unknown");
 
-        uint totalPrize = betAmount.add(betAmount);
+        // We use the totalPrize as the sum of deposits rather than betAmount * 2
+        // This is to avoid issues with the logic when a refund is given with only one player
+        uint totalPrize = players[player1].deposit + players[player2].deposit;
         uint losingPrize = totalPrize.div(10); 
         // because division rounds down, we calculate the losing prize first
         // this is so that the winning prize will always be the "rounded up" portion and be bigger 
@@ -678,10 +680,16 @@ contract Battleship is Ownable, PullPayment {
         uint winningPrize = totalPrize.sub(losingPrize);       
 
         if (gameEndState == GameEndState.Draw) {
-            asyncTransfer(player1, betAmount);
-            asyncTransfer(player2, betAmount);
-            emit PaidToEscrow(player1, betAmount);
-            emit PaidToEscrow(player2, betAmount);
+            // If draw, we refund users their deposit, rather than the betAmount
+            // This is to handle where there is only 1 player
+            if (player1 != 0) {
+                asyncTransfer(player1, players[player1].deposit);
+                emit PaidToEscrow(player1, players[player1].deposit);
+            }
+            if (player2 != 0) {
+                asyncTransfer(player2, players[player2].deposit);            
+                emit PaidToEscrow(player2, players[player2].deposit);
+            }
         } else if (gameEndState == GameEndState.Player1WinsInvalidGame) {
             asyncTransfer(player1, totalPrize);
             emit PaidToEscrow(player1, totalPrize);
