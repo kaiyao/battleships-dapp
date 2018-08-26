@@ -26,7 +26,7 @@ Lite-server is used as the dev server (same as in pet shop tutorial) but the fol
 
 Ghost mode is normally on by default and it syncs clicks etc. which messes things up (since each player is supposed to do their own stuff rather than the same actions). If you need to change it go to localhost:3001 to access the browsersync configuration. Then click "Sync Options" on the left, and click "Disable All" to disable all synchorization.
 
-I have only tried the app in Chrome 68. Please try to Chrome if you have problems with other browsers.
+I have only tried the app in Chrome 68. Please try to use Chrome if you have problems with other browsers.
 
 ### MetaMask
 Obviously, MetaMask must be configured to use the same Custom RPC (`http://<your ip>:8545`) for both browsers to be on the same private network and interact with each other.
@@ -43,15 +43,17 @@ If you switch accounts in MetaMask, you will need to refresh the page.
 
 ## Code Structure
 
-The logic is implemented as two contracts, contracts/Lobby.sol and contracts/Battleship.sol.
+The game contract logic is implemented as two contracts, contracts/Lobby.sol and contracts/Battleship.sol.
 Lobby.sol is the "game lobby" that you can create/join games.
 Battleship.sol contains the actual game itself.
 BattleshipTest.sol contains additional functions used only in the automated tests.
 
+The frontend UI is largely contained in index.html and js/app.js.
+
 ## Troubleshooting
 - Sometimes, the first time the page loads in Chrome, there is some Metamask issues (which you can see in the Chrome developer console). Just try to refresh the page and it should work the 2nd time.
 - If there is any issues with the page, try to refresh the page.
-- This app uses localstorage to store the positions of the ships before they are revealed at the end of the game. If you are using some browser/plugins that block localstorage, this can be an issue (e.g. Brave browser requires you to disable site shield).
+- This app uses localstorage in the browser to store the positions of the ships before they are revealed at the end of the game. If you are using some browser/plugins that block localstorage, this can cause the app to not work (e.g. Brave browser requires you to disable site shield).
 - The final withdrawal of winnings/refunds seems to require more gas that what MetaMask estimates by default which causes the transaction to fail (it says revert in the Chrome developer console). You need to set this gas value manually.
 
 ### Reset all stuff

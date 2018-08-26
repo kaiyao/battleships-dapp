@@ -36,7 +36,7 @@ In the lobby, there are dynamic arrays for the games. But there is no loop over 
 
 In addition, in `truffle.js` a 6000000 gas limit has been configured (which is lower than that on TestNets and the MainNet), and the unit tests pass.
 
-The transaction that uses the most gas is actually creating a new game on the blockchain, as it tries to deploy a new BattleShop.sol contract.
+The transaction that uses the most gas is actually creating a new game on the blockchain, as it tries to deploy a new BattleShop.sol contract. Note that in truffle.js the `solc` optimizer is enabled in order to reduce the contract size and make it deployable.
 
 ## Denial of Service
 Denial of Service is avoided with the following:
