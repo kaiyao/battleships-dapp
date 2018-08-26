@@ -83,9 +83,15 @@ The tests aim to test the various scenarios/flows of the whole game, and that th
 Each test has a one-line description to describe what it is checking for.
 
 Note that some of the tests may take some time (20-30 seconds ?). This is normal as some of the tests involve simulating an entire battleship game with 20+ moves per player.
+
+## UI Manual Testing
+Should you wish to look at the UI and play the game to the end, it may take a long while to complete one normal game. You can try to reduce the number of ships in the game by changing the variables at the top of `Battleship.sol` to reduce the time taken to try out one game.
+
+Once changed, you may need to redeploy and reset everything (see the "Reset all stuff" section above). This is because the Lobby deploys a new Battleship contract for each game and old contracts will still be on the blockchain if you do not reset everything.
+
+Don't forget to change the values back (and redeploy) after testing as the unit tests depend on the default values.
 	
 ## Libraries/EthPM
-
 The [OpenZeppelin](https://github.com/OpenZeppelin/openzeppelin-solidity) library is used in the code. Specifically, the `OnlyOwner`, `PullPayments` and `SafeMath` libraries are used.
 Even though there is an ethpm.json the version of OpenZeppelin in ethpm is much older than the version in npm. Hence the npm install is used instead.
 

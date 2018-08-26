@@ -7,11 +7,19 @@ import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 contract Battleship is Ownable, PullPayment {
     using SafeMath for uint256;
     
-    // Configure the game settings here
+    // ************************************
+    // * Configure the game settings here *
+    // ************************************
+    // Width of the game board (default 10)
     uint public constant boardWidth = 10;
+    // Height of the game board (default 10)
     uint public constant boardHeight = 10;
+    // Number of ships each player gets (default 5)
     uint constant shipsPerPlayer = 5;
-    uint[shipsPerPlayer] public boardShips = [5, 4, 3, 3, 2];    
+    // Length of each ship in an array (default [5, 4, 3, 3, 2])
+    uint[shipsPerPlayer] public boardShips = [5, 4, 3, 3, 2];
+    // Sum of the spaces used by all the ships (default 5 + 4 + 3 + 3 + 2 = 17)
+    // This is used to determine the number of hits required before a player wins 
     uint constant shipSpaces = 5 + 4 + 3 + 3 + 2;
     
     struct Ship {
