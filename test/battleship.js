@@ -554,7 +554,41 @@ contract('Game endings - timeouts', async (accounts) => {
         assert.equal(await instance.gameEndState(), GameEndState_Draw, "game is a draw, it hasn't started yet");
     });
 
-    it("should not be allowed to end game before waiting 24 hours since game started", async () => {
+    it("should not be allowed to end game before waiting 24 hours since game started if no moves made yet", async () => {
+        let instance = contract;
+        assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should be CREATED");
+
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
+
+        assert.equal(await instance.gameState(), GAMESTATE_PLAYERSJOINED, "game state should be PLAYERSJOINED");
+
+        // Submit some ships
+        let commitHashes = [];
+        for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
+            let shipWidth = boardShips[shipNumber];
+            let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
+            commitHashes.push(commitHash);
+        }
+        await instance.submitHiddenShipsPacked(commitHashes, {from: alice});
+        await instance.submitHiddenShipsPacked(commitHashes, {from: bob});
+
+        assert.equal((await instance.gameState()).toNumber(), GAMESTATE_STARTED, "game state should be STARTED");
+
+        // No moves
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        assert.equal((await instance.gameState()).toNumber(), GAMESTATE_STARTED, "game state should still be STARTED");
+
+        await instance.setTimestamp(await instance.createdAt() + 24 * 60 * 60 + 30);
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        assert.equal(await instance.gameEndState(), GameEndState_Draw, "game is a draw, it hasn't started yet");
+    });
+
+    it("should not be allowed to end game before waiting 24 hours since last move", async () => {
         let instance = contract;
         assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should be CREATED");
 
@@ -586,7 +620,43 @@ contract('Game endings - timeouts', async (accounts) => {
         await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
         assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
 
-        assert.equal(await instance.gameEndState(), GameEndState_Draw, "game is a draw, it hasn't started yet");
+        assert.equal(await instance.gameEndState(), GameEndState_Player1WinsInvalidGame, "player 1 wins because player 2 is not making moves");
+    });
+
+    it("should not be allowed to end game before waiting 24 hours since last move (2)", async () => {
+        let instance = contract;
+        assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should be CREATED");
+
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
+
+        assert.equal(await instance.gameState(), GAMESTATE_PLAYERSJOINED, "game state should be PLAYERSJOINED");
+
+        // Submit some ships
+        let commitHashes = [];
+        for (let shipNumber = 0; shipNumber < boardShips.length; shipNumber++) {
+            let shipWidth = boardShips[shipNumber];
+            let commitHash = await instance.calculateCommitHash(shipWidth, 1, 0, shipNumber, testNonce);
+            commitHashes.push(commitHash);
+        }
+        await instance.submitHiddenShipsPacked(commitHashes, {from: alice});
+        await instance.submitHiddenShipsPacked(commitHashes, {from: bob});
+
+        assert.equal((await instance.gameState()).toNumber(), GAMESTATE_STARTED, "game state should be STARTED");
+
+        // Make some move
+        await instance.makeMove(0, 0, {from: alice});
+        await instance.makeMoveAndUpdateLastMoveWithResult(0, 0, convertMoveResultToNumber('Hit'), 0, {from: bob});
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        assert.equal((await instance.gameState()).toNumber(), GAMESTATE_STARTED, "game state should still be STARTED");
+
+        await instance.setTimestamp(await instance.createdAt() + 24 * 60 * 60 + 30);
+
+        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        assert.equal(await instance.gameState(), GAMESTATE_ENDED, "game state should be ENDED");
+
+        assert.equal(await instance.gameEndState(), GameEndState_Player2WinsInvalidGame, "player 2 wins because player 1 is not making moves");
     });
 });
 
