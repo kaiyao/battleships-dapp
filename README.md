@@ -10,7 +10,9 @@ The contract code is configured to set up game similar to that of rules linked o
 - 2 x ship of length 3 (Destroyer, Submarine)
 - 1 x ship of length 2 (Patrol Boat)
 
-To simplify the UI, the game takes several liberties with the game. For example, in the real game, you call out a shot and the opponent responds with whether it was a Hit or Miss. The opponent then subsequently calls our his/her shot. In this game, however, the two are combined into one transaction so that only one transaction needs to be signed.
+To simplify the UI, the game takes several liberties with the game. For example:
+- The ship names do not appear in the UI, but the ship lengths are indicated and ships are assigned numbers (1 to 5) in the UI.
+- In the real game, you call out a shot and the opponent responds with whether it was a Hit or Miss. The opponent then subsequently calls our his/her shot. In this game, however, the two are combined into one transaction so that only one transaction needs to be signed.
 
 The game implements a simple betting system. Players specify a bet amount for each game when it is created. Both players need to put in the bet amount if they chose to join the game. If a player is found cheating or refusing to finish the game, the other player wins the entire prize pool. However, it both players play the game properly till the end, the winner gets 90% and the loser the remaining 10%. This is to incentivize players to play till the end.
 
@@ -44,9 +46,9 @@ There is a third contract, `BattleshipTest.sol` that contains additional functio
 ## Troubleshooting
 
 ### Common issues
-- Sometimes, the first time the page loads in Chrome, there is some Metamask issues (which you can see in the Chrome developer console). Just try to refresh the page and it should work the 2nd time.
-- If there are any issues with the page, try to refresh the page.
-- This app uses localstorage in the browser to store the positions of the ships before they are revealed at the end of the game. If you are using some browser/plugins that block localstorage, this can cause the app to not work (e.g. Brave browser requires you to disable site shield).
+- Sometimes, the first time the page loads in Chrome, there are some Metamask errors (which you can see in the Chrome developer console). Just try to refresh the page and it should work the 2nd time.
+- If there are any issues with the page, try to refresh the page. It should remember the last game you were in.
+- This app uses localstorage in the browser to store the positions of the ships before they are revealed at the end of the game. If you are using a browser or plugin that blocks localstorage, this can cause the app to not work (e.g. if you are using Brave browser, you need to disable site shield for the page to allow localstorage).
 - The final withdrawal of winnings/refunds seems to require more gas that what MetaMask estimates by default which causes the transaction to fail (it says revert in the Chrome developer console). You need to set this gas value manually.
 
 ### Reset all stuff
