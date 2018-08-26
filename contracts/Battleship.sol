@@ -681,7 +681,8 @@ contract Battleship is Ownable, PullPayment {
 
         if (gameEndState == GameEndState.Draw) {
             // If draw, we refund users their deposit, rather than the betAmount
-            // This is to handle where there is only 1 player
+            // This is to handle where there is only 1 player who joined and/or
+            // only 1 player has placed bet
             if (player1 != 0) {
                 asyncTransfer(player1, players[player1].deposit);
                 emit PaidToEscrow(player1, players[player1].deposit);

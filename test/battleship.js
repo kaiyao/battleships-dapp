@@ -1093,6 +1093,110 @@ contract('Game payments', async (accounts) => {
         
     });
 
+    it("draw should refund player full amount if only 1 player", async () => {
+
+        let instance = await BattleshipTest.new(betAmount, timestamp);
+        await instance.setTestMode();
+
+        await instance.joinGameForPlayer(alice);
+
+        let aliceBeforeDeposit = await getAccountBalance(alice);
+        await instance.depositBet({from: alice, value: betAmount});
+        let aliceAfterDeposit = await getAccountBalance(alice);
+        assert.approximately(aliceBeforeDeposit - aliceAfterDeposit, betAmount, delta, "alice should have deposit");
+
+        await instance.setGameEndState(GameEndState_Draw);
+        await instance.processWinningsTest();
+
+        let aliceBeforeWithdraw = await getAccountBalance(alice);
+        await instance.withdrawPayments({from: alice, gas: 5000000});
+        let aliceAfterWithdraw = await getAccountBalance(alice);
+        assert.approximately(aliceAfterWithdraw - aliceBeforeWithdraw, betAmount, delta, "alice should have refund");
+        
+    });
+
+    it("draw should refund player full amount if only 1 player has bet so far", async () => {
+
+        let instance = await BattleshipTest.new(betAmount, timestamp);
+        await instance.setTestMode();
+
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
+
+        let aliceBeforeDeposit = await getAccountBalance(alice);
+        await instance.depositBet({from: alice, value: betAmount});
+        let aliceAfterDeposit = await getAccountBalance(alice);
+        assert.approximately(aliceBeforeDeposit - aliceAfterDeposit, betAmount, delta, "alice should have deposit");
+
+        await instance.setGameEndState(GameEndState_Draw);
+        await instance.processWinningsTest();
+
+        let aliceBeforeWithdraw = await getAccountBalance(alice);
+        await instance.withdrawPayments({from: alice, gas: 5000000});
+        let aliceAfterWithdraw = await getAccountBalance(alice);
+        assert.approximately(aliceAfterWithdraw - aliceBeforeWithdraw, betAmount, delta, "alice should have refund");
+
+        let bobBeforeWithdraw = await getAccountBalance(bob);
+        await instance.withdrawPayments({from: bob, gas: 5000000});
+        let bobAfterWithdraw = await getAccountBalance(bob);
+        assert.approximately(bobAfterWithdraw - bobBeforeWithdraw, 0, delta, "bob should have no refund as player has not deposited");
+        
+    });
+
+    it("emergency stop with 1 player", async () => {
+
+        let instance = await BattleshipTest.new(betAmount, timestamp);
+        await instance.setTestMode();
+
+        await instance.joinGameForPlayer(alice);
+
+        let aliceBeforeDeposit = await getAccountBalance(alice);
+        await instance.depositBet({from: alice, value: betAmount});
+        let aliceAfterDeposit = await getAccountBalance(alice);
+        assert.approximately(aliceBeforeDeposit - aliceAfterDeposit, betAmount, delta, "alice should have deposit");
+
+        await instance.emergencyStop({from: owner});
+
+        let aliceBeforeWithdraw = await getAccountBalance(alice);
+        await instance.withdrawPayments({from: alice, gas: 5000000});
+        let aliceAfterWithdraw = await getAccountBalance(alice);
+        assert.approximately(aliceAfterWithdraw - aliceBeforeWithdraw, betAmount, delta, "alice should have refund");
+        
+    });
+
+    it("emergency stop with 2 players", async () => {
+
+        let instance = await BattleshipTest.new(betAmount, timestamp);
+        await instance.setTestMode();
+
+        await instance.joinGameForPlayer(alice);
+        await instance.joinGameForPlayer(bob);
+
+        let aliceBeforeDeposit = await getAccountBalance(alice);
+        await instance.depositBet({from: alice, value: betAmount});
+        let aliceAfterDeposit = await getAccountBalance(alice);
+        assert.approximately(aliceBeforeDeposit - aliceAfterDeposit, betAmount, delta, "alice should have deposit");
+
+        let bobBeforeDeposit = await getAccountBalance(bob);
+        await instance.depositBet({from: bob, value: betAmount});
+        let bobAfterDeposit = await getAccountBalance(bob);
+        assert.approximately(bobBeforeDeposit - bobAfterDeposit, betAmount, delta, "bob should have deposit");
+
+        await instance.emergencyStop({from: owner});
+
+        let aliceBeforeWithdraw = await getAccountBalance(alice);
+        await instance.withdrawPayments({from: alice, gas: 5000000});
+        let aliceAfterWithdraw = await getAccountBalance(alice);
+        assert.approximately(aliceAfterWithdraw - aliceBeforeWithdraw, betAmount, delta, "alice should have refund");
+
+        let bobBeforeWithdraw = await getAccountBalance(bob);
+        await instance.withdrawPayments({from: bob, gas: 5000000});
+        let bobAfterWithdraw = await getAccountBalance(bob);
+        assert.approximately(bobAfterWithdraw - bobBeforeWithdraw, betAmount, delta, "bob should have refund");
+        
+    });
+
+
     it("player 1 wins invalid game should award player 1 only", async () => {
 
         let instance = await BattleshipTest.new(betAmount, timestamp);
