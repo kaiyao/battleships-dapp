@@ -513,7 +513,7 @@ contract('Game endings - timeouts', async (accounts) => {
 
         await instance.joinGameForPlayer(alice);
 
-        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});        
+        await catchRevert(instance.tryToDeclareGameTimeoutOrEnded({from: alice}));        
         assert.equal(await instance.gameState(), GAMESTATE_CREATED, "game state should still be CREATED");
 
         await instance.setTimestamp(await instance.createdAt() + 24 * 60 * 60 + 30);
@@ -543,7 +543,7 @@ contract('Game endings - timeouts', async (accounts) => {
         }
         await instance.submitHiddenShipsPacked(commitHashes, {from: alice});
         
-        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        await catchRevert(instance.tryToDeclareGameTimeoutOrEnded({from: alice}));
         assert.equal(await instance.gameState(), GAMESTATE_PLAYERSJOINED, "game state should still be PLAYERSJOINED");
 
         await instance.setTimestamp(await instance.createdAt() + 24 * 60 * 60 + 30);
@@ -577,7 +577,7 @@ contract('Game endings - timeouts', async (accounts) => {
 
         // No moves
 
-        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        await catchRevert(instance.tryToDeclareGameTimeoutOrEnded({from: alice}));
         assert.equal((await instance.gameState()).toNumber(), GAMESTATE_STARTED, "game state should still be STARTED");
 
         await instance.setTimestamp(await instance.createdAt() + 24 * 60 * 60 + 30);
@@ -612,7 +612,7 @@ contract('Game endings - timeouts', async (accounts) => {
         // Make some move
         await instance.makeMove(0, 0, {from: alice});
 
-        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        await catchRevert(instance.tryToDeclareGameTimeoutOrEnded({from: alice}));
         assert.equal((await instance.gameState()).toNumber(), GAMESTATE_STARTED, "game state should still be STARTED");
 
         await instance.setTimestamp(await instance.createdAt() + 24 * 60 * 60 + 30);
@@ -648,7 +648,7 @@ contract('Game endings - timeouts', async (accounts) => {
         await instance.makeMove(0, 0, {from: alice});
         await instance.makeMoveAndUpdateLastMoveWithResult(0, 0, convertMoveResultToNumber('Hit'), 0, {from: bob});
 
-        await instance.tryToDeclareGameTimeoutOrEnded({from: alice});
+        await catchRevert(instance.tryToDeclareGameTimeoutOrEnded({from: alice}));
         assert.equal((await instance.gameState()).toNumber(), GAMESTATE_STARTED, "game state should still be STARTED");
 
         await instance.setTimestamp(await instance.createdAt() + 24 * 60 * 60 + 30);
@@ -944,7 +944,7 @@ contract('Game endings ' + assumptionsReminder, async (accounts) => {
         assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED");
 
         //console.log("Try to declare game timeout 1", await instance.createdAt(), await instance.startedAt(), await instance.finishedAt());
-        await instance.tryToDeclareGameTimeoutOrEnded({from: bob});
+        await catchRevert(instance.tryToDeclareGameTimeoutOrEnded({from: bob}));
 
         // State should not have moved
         assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED 2");
@@ -980,7 +980,7 @@ contract('Game endings ' + assumptionsReminder, async (accounts) => {
         assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED");
 
         //console.log("Try to declare game timeout 1", await instance.createdAt(), await instance.startedAt(), await instance.finishedAt());
-        await instance.tryToDeclareGameTimeoutOrEnded({from: bob});
+        await catchRevert(instance.tryToDeclareGameTimeoutOrEnded({from: bob}));
 
         // State should not have moved
         assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED 2");
@@ -993,7 +993,7 @@ contract('Game endings ' + assumptionsReminder, async (accounts) => {
         assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED 3");
 
         //console.log("Try to declare game timeout 2");
-        await instance.tryToDeclareGameTimeoutOrEnded({from: bob});
+        await catchRevert(instance.tryToDeclareGameTimeoutOrEnded({from: bob}));
 
         // State should not have moved
         assert.equal(await instance.gameState(), GAMESTATE_FINISHED, "game state should be FINISHED 4");

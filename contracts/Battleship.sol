@@ -738,53 +738,49 @@ contract Battleship is Ownable, PullPayment {
       */
     function tryToDeclareGameTimeoutOrEnded() public onlyPlayers {
         if (gameState == GameState.Created || gameState == GameState.PlayersJoined) {
-            if (getTimestamp() > createdAt.add(24 * 60 * 60)) {
+            require (getTimestamp() > createdAt.add(24 * 60 * 60), "Game must have taken too long since created state to end");
+            gameState = GameState.Ended;
+            gameEndState = GameEndState.Draw;
+            emit StateChanged(msg.sender, gameState);
+            processWinnings();
+        } else if (gameState == GameState.Started) {
+            if (lastMoveAt == 0) { // both players have not started yet
+                require (getTimestamp() > startedAt.add(24 * 60 * 60), "Game must have taken too long since started state to end"); // 24 hours since the game entered started state
                 gameState = GameState.Ended;
                 gameEndState = GameEndState.Draw;
                 emit StateChanged(msg.sender, gameState);
                 processWinnings();
-            }
-        } else if (gameState == GameState.Started) {
-            if (lastMoveAt == 0) { // both players have not started yet
-                if (getTimestamp() > startedAt.add(24 * 60 * 60)) { // 24 hours since the game entered started state
-                    gameState = GameState.Ended;
-                    gameEndState = GameEndState.Draw;
-                    emit StateChanged(msg.sender, gameState);
-                    processWinnings();
-                }
             } else { // first move has been placed
-                if (getTimestamp() > lastMoveAt.add(24 * 60 * 60)) { // 24 hours since the last move
-                    gameState = GameState.Ended;
-                    // since the player whose turn refuses to make the move, we award the opponent to be the winner
-                    if (getWhoseTurn() == player1) {
-                        gameEndState = GameEndState.Player2WinsInvalidGame;
-                    } else {
-                        gameEndState = GameEndState.Player1WinsInvalidGame;
-                    }
+                require(getTimestamp() > lastMoveAt.add(24 * 60 * 60), "Game must have taken too long since last move to end"); // 24 hours since the last move
+                gameState = GameState.Ended;
+                // since the player whose turn refuses to make the move, we award the opponent to be the winner
+                if (getWhoseTurn() == player1) {
+                    gameEndState = GameEndState.Player2WinsInvalidGame;
+                } else {
+                    gameEndState = GameEndState.Player1WinsInvalidGame;
                 }
             }
         } else if (gameState == GameState.Finished) { // not GameState.ShipsRevealed
-            if (getTimestamp() > finishedAt.add(24 * 60 * 60)) {
-                gameState = GameState.Ended;
+            require(getTimestamp() > finishedAt.add(24 * 60 * 60), "Game must have taken too long since finish declared to end");
+            gameState = GameState.Ended;
 
-                bool player1ShipsRevealed = checkPlayerShipsRevealed(player1);
-                bool player2ShipsRevealed = checkPlayerShipsRevealed(player2);
-                if (player1ShipsRevealed && player2ShipsRevealed) {
-                    // Should not happen as game should auto-move to ShipsRevealed status
-                    checkAllShipsRevealed();
-                } else if (player1ShipsRevealed && !player2ShipsRevealed) {
-                    gameState = GameState.Ended;
-                    gameEndState = GameEndState.Player1WinsInvalidGame;
-                } else if (!player1ShipsRevealed && player2ShipsRevealed) {
-                    gameState = GameState.Ended;
-                    gameEndState = GameEndState.Player2WinsInvalidGame;
-                } else {
-                    gameState = GameState.Ended;
-                    gameEndState = GameEndState.Draw;
-                }
-                emit StateChanged(msg.sender, gameState);
-                processWinnings();
+            bool player1ShipsRevealed = checkPlayerShipsRevealed(player1);
+            bool player2ShipsRevealed = checkPlayerShipsRevealed(player2);
+            if (player1ShipsRevealed && player2ShipsRevealed) {
+                // Should not happen as game should auto-move to ShipsRevealed status
+                checkAllShipsRevealed();
+            } else if (player1ShipsRevealed && !player2ShipsRevealed) {
+                gameState = GameState.Ended;
+                gameEndState = GameEndState.Player1WinsInvalidGame;
+            } else if (!player1ShipsRevealed && player2ShipsRevealed) {
+                gameState = GameState.Ended;
+                gameEndState = GameEndState.Player2WinsInvalidGame;
+            } else {
+                gameState = GameState.Ended;
+                gameEndState = GameEndState.Draw;
             }
+            emit StateChanged(msg.sender, gameState);
+            processWinnings();
         } else if (gameState == GameState.ShipsRevealed) {
             gameEndState = checkWinnerWhenBothPlayersRevealedShips();
             gameState = GameState.Ended;
@@ -792,6 +788,7 @@ contract Battleship is Ownable, PullPayment {
             processWinnings();
         } else {
             // Game has ended, do nothing
+            require(false, "Game has ended, so nothing to do");
         }
     }
 
