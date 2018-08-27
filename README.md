@@ -47,9 +47,9 @@ The contract code is in the directory `contracts`. The code for the Battleship g
 1. The Lobby (`Lobby.sol`): players can create new games, join games with only 1 player, switch games, etc.
 2. The Game itself (`Battleship.sol`): players place their bets, place their ships, make shots, etc.
 
-The UI for the entire DApp is inside `index.html` and `js/app.js`.
-
 There is a third contract, `BattleshipTest.sol` that contains additional functions used only in the automated tests.
+
+The UI for the entire DApp is inside `src/index.html` and `src/js/app.js`.
 
 ## Troubleshooting
 
