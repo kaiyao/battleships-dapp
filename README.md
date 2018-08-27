@@ -18,6 +18,16 @@ The game implements a simple betting system. Players specify a bet amount for ea
 
 The game itself currently stores each shot to the blockchain. While this is quite inefficient, I do not know how to not require doing so, and yet ensure players don't cheat and say that they did not call a shot they actually did.
 
+## Try it out
+You can access the UI for the game here: http://kaiyao-battleship-dapp.s3-website-us-east-1.amazonaws.com
+
+Note that currently, the "request to end game" button in the UI does not cause any visible output if the conditions to end the game are not met.
+
+The Lobby contract can be found on the Rinkeby testnet at:
+0x9a43a6319c3208b9f0a7463bce668599c904c4b8
+
+The Battleship contract is deployed when a new game is created. You can see the list of games in the UI (the ID is the contract address).
+
 ## Getting Started
 To run it, please do the following:
 - Ensure you have truffle and ganache-cli installed (as well as all related dependencies like node, npm, etc.).
@@ -116,6 +126,12 @@ Don't forget to change the values back (and redeploy) after testing as the unit 
 ## Libraries/EthPM
 The [OpenZeppelin](https://github.com/OpenZeppelin/openzeppelin-solidity) library is used in the code. Specifically, the `OnlyOwner`, `PullPayments` and `SafeMath` libraries are used.
 Even though there is an ethpm.json the version of OpenZeppelin in ethpm is much older than the version in npm. Hence the npm install is used instead.
+
+## Design Pattern Decisions
+Please see [design_pattern_decisions.md](design_pattern_decisions.md)
+
+## Avoiding Common Attacks
+Please see [avoiding_common_attacks.md](avoiding_common_attacks.md)
 
 
 

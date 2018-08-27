@@ -1,0 +1,5 @@
+The Lobby contract can be found on the Rinkeby testnet at:
+0x9a43a6319c3208b9f0a7463bce668599c904c4b8
+
+The Battleship contract is deployed when a new game is created.
+Please see the list of games at http://kaiyao-battleship-dapp.s3-website-us-east-1.amazonaws.com (the ID is the contract address).
