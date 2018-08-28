@@ -1,9 +1,11 @@
 pragma solidity ^0.4.24;
 
 import "./Battleship.sol";
+import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../node_modules/openzeppelin-solidity/contracts/lifecycle/Destructible.sol";
 
 /** @title Game lobby contract */
-contract Lobby is Ownable {
+contract Lobby is Ownable, Destructible {
 
     mapping (address => address[]) public games;
     address[] public openGames;
@@ -22,6 +24,22 @@ contract Lobby is Ownable {
         address indexed _from,
         address indexed _opponent,
         address indexed _gameAddress
+    );
+
+    event GameEmergencyStopped (
+        address indexed _from,
+        address indexed _gameAddress
+    );
+
+    event GameDestroyed (
+        address indexed _from,
+        address indexed _gameAddress
+    );
+
+    event GameDestroyedAndSend (
+        address indexed _from,
+        address indexed _gameAddress,
+        address indexed _recipient
     );
 
     /** @dev Constructor for this contract. Currently does nothing but the 
@@ -87,4 +105,35 @@ contract Lobby is Ownable {
 
         return gameAddress;
     }
+
+    /** @dev Emergency stop a game
+      * @param gameAddress Address to the Battleship game
+      * @return Address to the Battleship game
+      */
+    function emergencyStopGame(address gameAddress) public onlyOwner returns (address) {
+        Battleship(gameAddress).emergencyStop();
+        emit GameEmergencyStopped(msg.sender, gameAddress);
+        return gameAddress;
+    }
+
+    /** @dev Destroy a game
+      * @param gameAddress Address to the Battleship game
+      * @return Address to the Battleship game
+      */
+    function destroyGame(address gameAddress) public onlyOwner returns (address) {
+        Battleship(gameAddress).destroy();
+        emit GameDestroyed(msg.sender, gameAddress);
+        return gameAddress;
+    }
+
+    /** @dev Destroy a game and send ether to address
+      * @param gameAddress Address to the Battleship game
+      * @return Address to the Battleship game
+      */
+    function destroyGameAndSend(address gameAddress, address recipient) public onlyOwner returns (address) {
+        Battleship(gameAddress).destroyAndSend(recipient);
+        emit GameDestroyedAndSend(msg.sender, gameAddress, recipient);
+        return gameAddress;
+    }
+    
 }

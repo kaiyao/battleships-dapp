@@ -18,13 +18,13 @@ This is followed in most user-facing functions with require statements and modif
 ## Restricting Access
 The functions that change the game state are marked with "onlyPlayer" modifiers. This restricts those functions to the players. The getters (functions that retrieve the game state) are not restricted in any way, and could be used by other accounts to "spectate" the game.
 
-In addition the onlyOwner modifier from the OpenZeppeplin Ownable contract restricts access to sensitive functions like `emergencyStop()`
+In addition the onlyOwner modifier from the OpenZeppelin Ownable contract restricts access to sensitive functions like `emergencyStop()`
 
 ## Auto Deprecation
 This is not used because the game mechanism itself has its own "expiry" mechanism whereby the game ends if it takes too long.
 
 ## Mortal
-This is not implemented. I think if the owner of the contract is given access to destroy the contract and return all funds to the owner, would the participants be willing to bet?
+The mortal pattern has been implemented using the OpenZeppelin Destrucible contract. It exists solely to allow cleaning up of the blockchain if desired. This could be an issue as the owner can take player's bets by destroying the game contract.
 
 ## Speed Bump
 This is not implemented as it seems to be unnecessary in the context of a game, where we do not expect large sums in the betting, thus the risk is low.

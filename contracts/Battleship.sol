@@ -3,9 +3,10 @@ pragma solidity ^0.4.23;
 import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../node_modules/openzeppelin-solidity/contracts/payment/PullPayment.sol";
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../node_modules/openzeppelin-solidity/contracts/lifecycle/Destructible.sol";
 
 /** @title Battleship game contract */
-contract Battleship is Ownable, PullPayment {
+contract Battleship is Ownable, PullPayment, Destructible {
     using SafeMath for uint256;
     
     // ************************************

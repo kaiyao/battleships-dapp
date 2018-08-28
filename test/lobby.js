@@ -2,6 +2,19 @@ const Lobby = artifacts.require("Lobby");
 const Battleship = artifacts.require("Battleship");
 const catchRevert = require("./exceptions.js").catchRevert;
 
+const GAMESTATE_CREATED = 0;
+const GAMESTATE_PLAYERSJOINED = 1;
+const GAMESTATE_STARTED = 2;
+const GAMESTATE_FINISHED = 3;
+const GAMESTATE_SHIPSREVEALED = 4;
+const GAMESTATE_ENDED = 5;
+
+const GameEndState_Unknown = 0;
+const GameEndState_Draw = 1;
+const GameEndState_Player1WinsValidGame = 2;
+const GameEndState_Player2WinsValidGame = 3; 
+const GameEndState_Player1WinsInvalidGame = 4;
+const GameEndState_Player2WinsInvalidGame = 5;
 
 contract('Lobby open games', async (accounts) => {
 
@@ -124,6 +137,64 @@ contract('Lobby test add two same players', async (accounts) => {
 
         const openGameIndex = 0;
         await catchRevert(instance.joinOpenGame(openGameIndex, {from: alice}));
+    });
+
+});
+
+contract('Lobby test stopping and destroying', async (accounts) => {
+
+    const owner = accounts[0];
+    const alice = accounts[1];
+    const bob = accounts[2];
+    const emptyAddress = '0x0000000000000000000000000000000000000000';
+
+    it("should only be allowed to stop/destroy games from Lobby", async () => {
+        let instance = await Lobby.deployed();
+        
+        let games = await instance.getGamesBelongingToPlayer({from: alice});
+        assert.equal(games.length, 0, "list of games should be empty at the start");
+        
+        await instance.createGameWithOpponent(bob, 0, {from: alice});
+        games = await instance.getGamesBelongingToPlayer({from: alice});
+        assert.equal(games.length, 1, "list of games should have one game");
+
+        let gameAddress = games[0];
+        let game = await Battleship.at(gameAddress);
+        assert.equal(await game.gameState(), GAMESTATE_PLAYERSJOINED, "Game should have been created and players joined");
+
+        await catchRevert(game.emergencyStop({from: owner})); // should not be allowed to emergency stop as the lobby is the owner
+        await catchRevert(game.emergencyStop({from: alice})); // should not be allowed to emergency stop as the lobby is the owner
+        await catchRevert(game.emergencyStop({from: bob})); // should not be allowed to emergency stop as the lobby is the owner
+
+        await catchRevert(instance.emergencyStopGame(gameAddress, {from: alice})); // only owner of lobby can call
+        await catchRevert(instance.emergencyStopGame(gameAddress, {from: bob})); // only owner of lobby can call
+        assert.equal(await game.gameState(), GAMESTATE_PLAYERSJOINED, "Game should NOT have ended");
+
+        await instance.emergencyStopGame(gameAddress);
+        assert.equal(await game.gameState(), GAMESTATE_ENDED, "Game should be ended");
+
+        await catchRevert(game.destroy({from: owner})); // should not be allowed to destroy
+        await catchRevert(game.destroy({from: alice})); // should not be allowed to destroy
+        await catchRevert(game.destroy({from: bob})); // should not be allowed to destroy
+        assert.equal(await game.gameState(), GAMESTATE_ENDED, "Game should be ended 2");
+
+        await catchRevert(instance.destroyGame(gameAddress, {from: alice})); // only owner of lobby can call
+        await catchRevert(instance.destroyGame(gameAddress, {from: bob})); // only owner of lobby can call
+        assert.equal(await game.gameState(), GAMESTATE_ENDED, "Game should be ended 3");
+
+        await instance.destroyGame(gameAddress);
+        // ensure address no longer a contract
+        try {
+            await game.gameState();
+            throw null;
+        }
+        catch (error) {
+            assert(error, "Expected an error but did not get one");
+            let expectedErrorMessageStartsWith = "Attempting to run transaction which calls a contract function, but recipient address";
+            let expectedErrorMessageEndsWith = "is not a contract address";
+            assert(error.message.startsWith(expectedErrorMessageStartsWith), "Expected an error starting with '" + expectedErrorMessageStartsWith + "' but got '" + error.message + "' instead");
+            assert(error.message.endsWith(expectedErrorMessageEndsWith), "Expected an error ending with '" + expectedErrorMessageEndsWith + "' but got '" + error.message + "' instead");
+        }
     });
 
 });
