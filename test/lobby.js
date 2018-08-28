@@ -2,12 +2,12 @@ const Lobby = artifacts.require("Lobby");
 const Battleship = artifacts.require("Battleship");
 const catchRevert = require("./exceptions.js").catchRevert;
 
-const GAMESTATE_CREATED = 0;
-const GAMESTATE_PLAYERSJOINED = 1;
-const GAMESTATE_STARTED = 2;
-const GAMESTATE_FINISHED = 3;
-const GAMESTATE_SHIPSREVEALED = 4;
-const GAMESTATE_ENDED = 5;
+const GameState_Created = 0;
+const GameState_PlayersJoined = 1;
+const GameState_Started = 2;
+const GameState_Finished = 3;
+const GameState_ShipsRevealed = 4;
+const GameState_Ended = 5;
 
 const GameEndState_Unknown = 0;
 const GameEndState_Draw = 1;
@@ -160,7 +160,7 @@ contract('Lobby test stopping and destroying', async (accounts) => {
 
         let gameAddress = games[0];
         let game = await Battleship.at(gameAddress);
-        assert.equal(await game.gameState(), GAMESTATE_PLAYERSJOINED, "Game should have been created and players joined");
+        assert.equal(await game.gameState(), GameState_PlayersJoined, "Game should have been created and players joined");
 
         await catchRevert(game.emergencyStop({from: owner})); // should not be allowed to emergency stop as the lobby is the owner
         await catchRevert(game.emergencyStop({from: alice})); // should not be allowed to emergency stop as the lobby is the owner
@@ -168,19 +168,19 @@ contract('Lobby test stopping and destroying', async (accounts) => {
 
         await catchRevert(instance.emergencyStopGame(gameAddress, {from: alice})); // only owner of lobby can call
         await catchRevert(instance.emergencyStopGame(gameAddress, {from: bob})); // only owner of lobby can call
-        assert.equal(await game.gameState(), GAMESTATE_PLAYERSJOINED, "Game should NOT have ended");
+        assert.equal(await game.gameState(), GameState_PlayersJoined, "Game should NOT have ended");
 
         await instance.emergencyStopGame(gameAddress);
-        assert.equal(await game.gameState(), GAMESTATE_ENDED, "Game should be ended");
+        assert.equal(await game.gameState(), GameState_Ended, "Game should be ended");
 
         await catchRevert(game.destroy({from: owner})); // should not be allowed to destroy
         await catchRevert(game.destroy({from: alice})); // should not be allowed to destroy
         await catchRevert(game.destroy({from: bob})); // should not be allowed to destroy
-        assert.equal(await game.gameState(), GAMESTATE_ENDED, "Game should be ended 2");
+        assert.equal(await game.gameState(), GameState_Ended, "Game should be ended 2");
 
         await catchRevert(instance.destroyGame(gameAddress, {from: alice})); // only owner of lobby can call
         await catchRevert(instance.destroyGame(gameAddress, {from: bob})); // only owner of lobby can call
-        assert.equal(await game.gameState(), GAMESTATE_ENDED, "Game should be ended 3");
+        assert.equal(await game.gameState(), GameState_Ended, "Game should be ended 3");
 
         await instance.destroyGame(gameAddress);
         // ensure address no longer a contract
