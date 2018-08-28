@@ -22,7 +22,7 @@ The game itself currently stores each shot to the blockchain. While this is quit
 You can access the UI for the game here: http://kaiyao-battleship-dapp.s3-website-us-east-1.amazonaws.com
 
 The Lobby contract can be found on the Rinkeby testnet at:
-0x58b0361a9c23d7dea8115e250b5bafe7b59a5b6b
+0x06574ca6e7d4516edfeb7452651d719b2d10d62b
 
 The Battleship contract is deployed when a new game is created. You can see the list of games in the UI (the ID is the contract address).
 

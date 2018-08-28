@@ -1127,7 +1127,7 @@ contract('Game payments', async (accounts) => {
 
     // we use a big amount to make it obvious when something is wrong
     // compared to the transaction fees
-    let betAmount = 10000000000000000000;    
+    let betAmount = 10000000000000000000;
     let delta = betAmount * 0.001; // a bit of delta for transaction costs and such
 
     it("draw should refund both players", async () => {

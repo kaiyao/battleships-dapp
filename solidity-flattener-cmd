@@ -1,0 +1,4 @@
+# You need to install solidity-flattener first
+# https://github.com/BlockCatIO/solidity-flattener
+
+~/.local/bin/solidity_flattener --solc-paths="node_modules/openzeppelin-solidity/contracts/=$PWD/node_modules/openzeppelin-solidity/contracts/" --output contracts/LobbyFlattened.sol contracts/Lobby.sol
