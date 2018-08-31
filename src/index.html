@@ -78,7 +78,14 @@
         </div>
     </div>
 
-    <div class="container" id="app" v-show="visible">        
+    <div class="container" id="app" v-show="visible">
+        
+        <div class="row">
+            <div class="col-xs-12">
+                <template v-if="account">Your account address: {{ account }}</template>
+                <template v-else>Not logged in. Please login to MetaMask and reload this page.</template>
+            </div>
+        </div>
 
         <div class="row">
 
