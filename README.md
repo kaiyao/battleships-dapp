@@ -18,6 +18,9 @@ The game implements a simple betting system. Players specify a bet amount for ea
 
 The game itself currently stores each shot to the blockchain. While this is quite inefficient, I do not know how to not require doing so, and yet ensure players don't cheat and say that they did not call a shot they actually did.
 
+The game uses a state machine pattern to track the various states of the game. Here's a diagram to illustrate the flow of the game states:
+![Battleship Flow Diagram](docs/images/battleship-diagram.png)
+
 ## Try it out
 You can access the UI for the game here: http://kaiyao-battleship-dapp.s3-website-us-east-1.amazonaws.com
 
