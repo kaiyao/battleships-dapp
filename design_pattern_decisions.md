@@ -27,7 +27,7 @@ In addition the onlyOwner modifier from the OpenZeppelin Ownable contract restri
 This is not used because the game mechanism itself has its own "expiry" mechanism whereby the game ends if it takes too long.
 
 ## Mortal
-The mortal pattern has been implemented using the OpenZeppelin Destrucible contract. It exists solely to allow cleaning up of the blockchain if desired. This could be an issue as the owner can take player's bets by destroying the game contract.
+The mortal pattern has been implemented using the OpenZeppelin `Destructible` contract. It exists solely to allow cleaning up of the blockchain if desired. This could be an issue as the owner can take player's bets by destroying the game contract.
 
 ## Speed Bump
 This is not implemented as it seems to be unnecessary in the context of a game, where we do not expect large sums in the betting, thus the risk is low.
