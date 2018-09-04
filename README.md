@@ -14,7 +14,7 @@ To simplify the UI, the game takes several liberties with the game. For example:
 - The ship names do not appear in the UI, but the ship lengths are indicated and ships are assigned numbers (1 to 5) in the UI.
 - In the real game, you call out a shot and the opponent responds with whether it was a Hit or Miss. The opponent then subsequently calls our his/her shot. In this game, however, the two are combined into one transaction so that only one transaction needs to be signed.
 
-The game implements a simple betting system. Players specify a bet amount for each game when it is created. Both players need to put in the bet amount if they chose to join the game. If a player is found cheating or refusing to finish the game, the other player wins the entire prize pool. However, it both players play the game properly till the end, the winner gets 90% and the loser the remaining 10%. This is to incentivize players to play till the end.
+The game implements a simple betting system. Players specify a bet amount for each game when it is created. Both players need to put in the bet amount if they chose to join the game. If a player is found cheating or refusing to finish the game, the other player wins the entire prize pool. However, if both players play the game properly till the end, the winner gets 90% and the loser the remaining 10%. This is to incentivize players to play till the end (and reveal the ship positions). Otherwise, players may just choose to stop playing shortly before the game ends if they think they have lost.
 
 The game itself currently stores each shot to the blockchain. While this is quite inefficient, I do not know how to not require doing so, and yet ensure players don't cheat and say that they did not call a shot they actually did.
 
@@ -26,6 +26,11 @@ You can access the UI for the game here: http://kaiyao-battleship-dapp.s3-websit
 
 The Lobby contract can be found on the Rinkeby testnet at:
 0x06574ca6e7d4516edfeb7452651d719b2d10d62b
+
+You can see the contract code (combined into one big file) and interact with it on Etherscan:
+https://rinkeby.etherscan.io/address/0x06574ca6e7d4516edfeb7452651d719b2d10d62b
+
+The combined code is generated using [solidity-flattener](https://github.com/BlockCatIO/solidity-flattener). The command used can be found in `solidity-flattener-cmd`.
 
 The Battleship contract is deployed when a new game is created. You can see the list of games in the UI (the ID is the contract address).
 

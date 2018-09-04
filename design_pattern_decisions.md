@@ -1,7 +1,10 @@
 # Design Pattern Decisions
 
 ## Commit/Reveal
-The commit/reveal pattern forms the basis of the battleship game. This is required as we do not want the opponent to be able to peek at the blockchain to see the opponent's ship locations.
+The commit/reveal pattern forms the basis of the battleship game. This is required as we do not want the opponent to be able to peek at the blockchain to see the opponent's ship locations. At the start of the game players only submit the `hash(position + nonce)` of each ship, and at the end of the game, players submit the position and nonce to reveal the ship positions.
+
+## Factory Contract
+The `Lobby` contract only holds addresses to the individual `Battleship` game contracts. Whenever a new game is started from the lobby, a new `Battleship` game contract is deployed. The reason this is done is to simplify the `Battleship` game contract code, so that the code only needs to assume one game (instead of one big contract handling all games).
 
 ## Circuit Breaker/Emergency Stop
 The game implements the Circuit Breaker/Emergency Stop pattern. The owner of the Battleship contract can call the `emergencyStop()` function which ends a game with a draw, and allows players to withdraw their bets. This is to allow the owner to stop a running game if an exploit or bug is found in the game logic.
